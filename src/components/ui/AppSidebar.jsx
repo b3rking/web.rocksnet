@@ -18,9 +18,7 @@ import {
     IconUsers,
 } from "@tabler/icons-react"
 
-import { NavDocuments } from "@/components/ui/NavDocument"
-import { NavMain } from "@/components/ui/NavMain"
-import { NavSecondary } from "@/components/ui/NavSecondary"
+import { NavLinks } from "#components/ui/NavLinks"
 import { NavUser } from "@/components/ui/NavUser"
 import {
     Sidebar,
@@ -31,6 +29,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { Link } from "react-router"
 
 const data = {
     user: {
@@ -159,18 +158,16 @@ export function AppSidebar(props) {
                             asChild
                             className="data-[slot=sidebar-menu-button]:p-1.5!"
                         >
-                            <a href="#">
+                            <Link to="/">
                                 <IconInnerShadowTop className="size-5!" />
-                                <span className="text-base font-semibold">Acme Inc.</span>
-                            </a>
+                                <span className="text-base font-semibold">Rocksnet</span>
+                            </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={data.navMain} />
-                <NavDocuments items={data.documents} />
-                <NavSecondary items={data.navSecondary} className="mt-auto" />
+                <NavLinks items={data.documents} />
             </SidebarContent>
             <SidebarFooter>
                 <NavUser user={data.user} />
