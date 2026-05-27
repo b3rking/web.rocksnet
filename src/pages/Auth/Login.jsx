@@ -70,7 +70,7 @@ export function Login({ className, ...props }) {
                                         <Input id="password" type="password" required disabled={isLoading} />
                                     </Field>
                                     <Field>
-                                        <Button type="submit" disabled={isLoading}>{isLoading ? "Logging in..." : "Login"}</Button>
+                                        <Button type="submit" disabled={isLoading}>{isLoading ? "connexion..." : "Se connecter"}</Button>
                                     </Field>
                                 </FieldGroup>
                             </form>

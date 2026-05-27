@@ -1,11 +1,8 @@
 "use client"
 
 import {
-    IconCreditCard,
     IconDotsVertical,
     IconLogout,
-    IconNotification,
-    IconUserCircle,
 } from "@tabler/icons-react"
 
 import {
@@ -16,10 +13,8 @@ import {
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -28,16 +23,23 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { useSelector } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { Navigate } from "react-router"
+import { logout } from "@/features/auth/authSlice"
 
 export function NavUser() {
     const { isMobile } = useSidebar()
     const auth = useSelector((store) => store.auth)
     const user = auth.user
+    const dispatch = useDispatch()
     
     if (!auth.is_auth) {
         return <Navigate to="/login" replace />
+    }
+
+    const handleLogout = (e) => {
+        e.preventDefault()
+        dispatch(logout())
     }
 
     return (
@@ -82,25 +84,9 @@ export function NavUser() {
                                 </div>
                             </div>
                         </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                            <DropdownMenuItem>
-                                <IconUserCircle />
-                                Account
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <IconCreditCard />
-                                Billing
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <IconNotification />
-                                Notifications
-                            </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleLogout}>
                             <IconLogout />
-                            Log out
+                            Deconnexion
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
