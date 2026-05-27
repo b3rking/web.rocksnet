@@ -32,7 +32,7 @@ export function NavUser() {
     const auth = useSelector((store) => store.auth)
     const user = auth.user
     const dispatch = useDispatch()
-    
+
     if (!auth.is_auth) {
         return <Navigate to="/login" replace />
     }
@@ -84,9 +84,9 @@ export function NavUser() {
                                 </div>
                             </div>
                         </DropdownMenuLabel>
-                        <DropdownMenuItem onClick={handleLogout}>
+                        <DropdownMenuItem onClick={handleLogout} disabled={auth.isLoading}>
                             <IconLogout />
-                            Deconnexion
+                            { auth.isLoading ? 'Deconnexion...' : 'Se Deconnecter'}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
