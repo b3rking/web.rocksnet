@@ -32,7 +32,7 @@ export function Login({ className, ...props }) {
         const password = e.target.password.value;
 
         try {
-            const result = await dispatch(authenticate({ email, password })).unwrap()
+            await dispatch(authenticate({ email, password })).unwrap()
             navigate("/")
         } catch (err) {
             setError(err?.message || "Login failed. Please try again.")
