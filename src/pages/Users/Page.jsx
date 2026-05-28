@@ -17,7 +17,10 @@ import {
 import { Modal } from "#components/ui/Modal"
 import api from "#lib/axios"
 import { useEffect, useState } from "react"
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 import Create from "./Create"
+import { useApp } from "#hooks/useApp"
 
 const Page = () => {
     const [users, setUsers] = useState([])
@@ -32,6 +35,7 @@ const Page = () => {
     const [editIsLoading, setEditIsLoading] = useState(false)
     const [deleteIsLoading, setDeleteIsLoading] = useState(false)
     const [deleteError, setDeleteError] = useState("")
+    const app = useApp('Utilisateurs')
 
     const columns = [
         {
@@ -43,8 +47,38 @@ const Page = () => {
             header: "Email",
         },
         {
+            accessorKey: "created_at",
+            header: "Date de creation",
+            cell: ({ getValue }) => {
+                const rawDate = getValue();
+                if (!rawDate) return "-";
+                
+                return format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr });
+            },
+        },
+        {
             accessorKey: "role.name",
             header: "Role",
+            cell: ({ getValue }) => {
+                const role = getValue()?.toLowerCase();
+                if (!role) return "-";
+                
+                // Define colors for each role
+                const badgeStyles = {
+                    admin: "bg-red-100 text-red-800 border-red-200",
+                    "super agent": "bg-purple-100 text-purple-800 border-purple-200",
+                    agent: "bg-blue-100 text-blue-800 border-blue-200",
+                };
+
+                // Fallback to gray if it doesn't match
+                const currentStyle = badgeStyles[role] || "bg-gray-100 text-gray-800 border-gray-200";
+
+                return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${currentStyle}`}>
+                        {getValue()}
+                    </span>
+                );
+            },
         },
         {
             id: "actions",
