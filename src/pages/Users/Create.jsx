@@ -15,6 +15,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "#components/ui/select"
+// import { SelectPortal } from "@radix-ui/react-select"
 import api from "#lib/axios"
 
 const Create = ({ onUserCreated }) => {
@@ -37,7 +38,8 @@ const Create = ({ onUserCreated }) => {
     const fetchRoles = async () => {
         try {
             const res = await api.get('/roles')
-            const rolesData = Array.isArray(res.data) ? res.data : Array.isArray(res.data.data) ? res.data.data : []
+            
+            const rolesData = Array.isArray(res.data.roles) ? res.data.roles : []
             setRoles(rolesData)
             // Set agent as default if available
             const agentRole = rolesData.find(role => role.name.toLowerCase() === 'agent')
@@ -167,16 +169,18 @@ const Create = ({ onUserCreated }) => {
 
                 <div className="space-y-2">
                     <Label htmlFor="role">Rôle</Label>
-                    <Select value={formData.role_id} onValueChange={handleRoleChange}>
+                    <Select value={formData.role_id} onValueChange={handleRoleChange} modal={false}>
                         <SelectTrigger id="role">
                             <SelectValue placeholder="Sélectionnez un rôle" />
                         </SelectTrigger>
                         <SelectContent>
-                            {Array.isArray(roles) && roles.map(role => (
-                                <SelectItem key={role.id} value={String(role.id)}>
-                                    {role.name}
-                                </SelectItem>
-                            ))}
+                            {/* <SelectPortal> */}
+                                {Array.isArray(roles) && roles.map(role => (
+                                    <SelectItem key={role.id} value={String(role.id)}>
+                                        {role.name}
+                                    </SelectItem>
+                                 ))}
+                            {/* </SelectPortal> */}
                         </SelectContent>
                     </Select>
                     {errors.role_id && (

@@ -10,7 +10,9 @@ export const Modal = ({ trigger, children, isOpen, onOpenChange }) => {
             <DialogTrigger asChild>
                 {trigger}
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
                 {children}
             </DialogContent>
         </Dialog>

@@ -35,7 +35,8 @@ const Page = () => {
     const [editIsLoading, setEditIsLoading] = useState(false)
     const [deleteIsLoading, setDeleteIsLoading] = useState(false)
     const [deleteError, setDeleteError] = useState("")
-    const app = useApp('Utilisateurs')
+    // setting the page title
+    useApp('Utilisateurs')
 
     const columns = [
         {
@@ -131,7 +132,7 @@ const Page = () => {
     const fetchRoles = async () => {
         try {
             const res = await api.get('/roles')
-            const rolesData = Array.isArray(res.data) ? res.data : Array.isArray(res.data.data) ? res.data.data : []
+            const rolesData = Array.isArray(res.data.roles) ? res.data.roles : []
             setRoles(rolesData)
         } catch (err) {
             console.log('Error fetching roles:', err)
