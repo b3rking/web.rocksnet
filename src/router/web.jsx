@@ -1,4 +1,4 @@
-import { Error, AppLayout, Dashboard, User, Profil } from "@/pages";
+import { Error, AppLayout, Dashboard, User, Profil, Stock } from "@/pages";
 import { createBrowserRouter } from "react-router";
 import ProtectedRoute from "./ProtectedRoute";
 import LoginRoute from "./LoginRoute";
@@ -22,6 +22,11 @@ const router = createBrowserRouter([
             {
                 path: '/profils',
                 element: <Profil />,
+                errorElement: <Error />
+            },
+            {
+                path: '/stocks',
+                element: <Stock />,
                 errorElement: <Error />
             }
         ]

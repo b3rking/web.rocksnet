@@ -1,6 +1,7 @@
 "use client"
 
 import {
+    IconBuildingWarehouse,
     IconInnerShadowTop,
     IconTicket,
     IconUser
@@ -30,6 +31,11 @@ const data = {
             name: "Profiles",
             url: "/profils",
             icon: IconTicket,
+        },
+        {
+            name: "Stock",
+            url: "/stocks",
+            icon: IconBuildingWarehouse,
         }
     ],
 }
