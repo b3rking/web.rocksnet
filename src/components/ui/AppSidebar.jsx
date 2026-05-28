@@ -2,6 +2,7 @@
 
 import {
     IconInnerShadowTop,
+    IconTicket,
     IconUser
 } from "@tabler/icons-react"
 
@@ -25,6 +26,11 @@ const data = {
             url: "/users",
             icon: IconUser,
         },
+        {
+            name: "Profiles",
+            url: "/profils",
+            icon: IconTicket,
+        }
     ],
 }
 

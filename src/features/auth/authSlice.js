@@ -42,7 +42,7 @@ export const checkAuth = createAsyncThunk(
                 },
             });
 
-            console.log("CheckAuth response:", res.data);
+            // console.log("CheckAuth response:", res.data);
             return res.data;
         } catch (error) {
             localStorage.removeItem("rocksnet_access_token");
