@@ -14,13 +14,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { useDispatch } from "react-redux"
 import { authenticate } from "@/features/auth/authSlice"
-import { useNavigate } from "react-router"
+import { useNavigate, useLocation } from "react-router"
 import { useState } from "react"
 
 export function Login({ className, ...props }) {
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const location = useLocation()
     const [error, setError] = useState("")
     const [isLoading, setIsLoading] = useState(false)
 
@@ -33,7 +34,9 @@ export function Login({ className, ...props }) {
 
         try {
             await dispatch(authenticate({ email, password })).unwrap()
-            navigate("/")
+            // Redirect to the intended location or home
+            const from = location.state?.from?.pathname || "/"
+            navigate(from)
         } catch (err) {
             setError(err?.message || "Login failed. Please try again.")
         } finally {

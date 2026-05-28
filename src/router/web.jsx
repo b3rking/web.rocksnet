@@ -1,4 +1,4 @@
-import { Error, AppLayout, Dashboard } from "@/pages";
+import { Error, AppLayout, Dashboard, User } from "@/pages";
 import { createBrowserRouter } from "react-router";
 import ProtectedRoute from "./ProtectedRoute";
 import LoginRoute from "./LoginRoute";
@@ -13,6 +13,11 @@ const router = createBrowserRouter([
             {
                 index: true,
                 element: <Dashboard />
+            },
+            {
+                path: '/users',
+                element: <User />,
+                errorElement: <Error />
             }
         ]
     },
