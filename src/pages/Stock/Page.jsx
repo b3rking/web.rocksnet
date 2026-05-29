@@ -1,14 +1,14 @@
 "use client"
 
 import { DataTable } from "#components/ui/DataTable"
-import { Button } from "#components/ui/button"
 import api from "#lib/axios"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { format, parseISO } from "date-fns"
 import { fr } from "date-fns/locale"
 import { useApp } from "#hooks/useApp"
-// Assuming your creation/attribution component handles the POST /api/stock/attribute modal
-// import Create from "./Create" 
+import CreateStock from "./CreateStock"
+import { useAuth } from "#hooks/useAuth"
+import SaleStock from "./SaleStock"
 
 const Page = () => {
     const [stocks, setStocks] = useState([])
@@ -16,17 +16,35 @@ const Page = () => {
 
     // Setting page layout title
     useApp('Stock')
+    const user = useAuth()
+    
+    const getStockData = async () => {
+        try {
+            const res = await api.get('/stock')
+            const resolvedData = Array.isArray(res.data) ? res.data : res.data.stock || res.data.data || []
+            setStocks(resolvedData)
+            setIsLoading(false)
+        } catch (err) {
+            setIsLoading(false)
+            console.error('Error fetching stock:', err)
+        }
+    }
 
-    const columns = [
+    useEffect(() => {
+        getStockData()
+    }, [])
+
+    // useMemo prevents component identity recreation on parent form typing actions
+    const columns = useMemo(() => [
         {
             id: "agent",
             header: "Agent / Utilisateur",
             cell: ({ row }) => {
-                const user = row.original.user
+                const userObj = row.original.user
                 return (
                     <div className="flex flex-col">
-                        <span className="font-medium">{user?.name || "Inconnu"}</span>
-                        <span className="text-xs text-muted-foreground">{user?.email || "-"}</span>
+                        <span className="font-medium">{userObj?.name || "Inconnu"}</span>
+                        <span className="text-xs text-muted-foreground">{userObj?.email || "-"}</span>
                     </div>
                 )
             }
@@ -66,6 +84,7 @@ const Page = () => {
             }
         },
         {
+            id: "quantity",
             accessorKey: "quantity",
             header: "Quantité en Stock",
             cell: ({ getValue }) => {
@@ -78,6 +97,7 @@ const Page = () => {
             }
         },
         {
+            id: "updated_at",
             accessorKey: "updated_at",
             header: "Dernière Mise à jour",
             cell: ({ getValue }) => {
@@ -89,52 +109,37 @@ const Page = () => {
         {
             id: "actions",
             header: "Actions",
-            cell: ({ row }) => (
-                <div className="flex gap-2">
-                    {/* Placeholder action matching your endpoint route for selling or registering a sale */}
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                            // Logic or state trigger to open your POST /api/stock/sale modal
-                            console.log("Enregistrer une vente pour:", row.original)
-                        }}
-                    >
-                        Vendre
-                    </Button>
-                </div>
-            ),
+            cell: ({ row }) => {
+                const rowData = row.original
+
+                // Check authorization role state rules safely
+                // const canSell = user && !user.role_id > 1 && (user.role === 'agent' || user.role === 'superagent')
+                const canSell = user?.role_id > 1
+
+                if (!canSell) {
+                    return <span className="text-xs text-muted-foreground/50">—</span>
+                }
+
+                return (
+                    <div className="flex gap-2">
+                        <SaleStock 
+                            profil={rowData} 
+                            onSaleRecorded={getStockData} 
+                        />
+                    </div>
+                )
+            },
         },
-    ]
-
-    const getStockData = async () => {
-        try {
-            // GET http://localhost:8000/api/stock
-            const res = await api.get('/stock')
-            // Adapts logic seamlessly if backend encapsulates array inside wrapper objects
-            const resolvedData = Array.isArray(res.data) ? res.data : res.data.stock || res.data.data || []
-            setStocks(resolvedData)
-            setIsLoading(false)
-        } catch (err) {
-            setIsLoading(false)
-            console.error('Error fetching stock:', err)
-        }
-    }
-
-    useEffect(() => {
-        getStockData()
-    }, [])
-
-    const handleStockUpdated = () => {
-        getStockData()
-    }
+    ], [user]) // Re-run calculations ONLY if the authenticated identity context shifts
 
     return (
         <div>
             <div className="flex flex-row items-center justify-between font-bold mb-6">
                 <h2>Gestion du stock des agents</h2>
-                {/* CreateStock element to target the POST /api/stock/attribute endpoint */}
-                {/* <CreateStock onStockAssigned={handleStockUpdated} /> */}
+                <div className="flex flex-row">
+                    {/* Explicit update hook injection now handles the fresh state changes */}
+                    <CreateStock onStockAssigned={getStockData} />
+                </div>
             </div>
 
             {isLoading ? (
