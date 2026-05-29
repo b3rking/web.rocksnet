@@ -2,6 +2,7 @@
 
 import {
     IconBuildingWarehouse,
+    IconCalendarTime,
     IconInnerShadowTop,
     IconTicket,
     IconUser
@@ -36,6 +37,11 @@ const data = {
             name: "Stock",
             url: "/stocks",
             icon: IconBuildingWarehouse,
+        },
+        {
+            name: "Historique",
+            url: "/history",
+            icon: IconCalendarTime,
         }
     ],
 }
