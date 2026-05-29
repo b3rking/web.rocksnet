@@ -1,4 +1,4 @@
-import { Error, AppLayout, Dashboard, User, Profil, Stock, History } from "@/pages";
+import { Error, AppLayout, Dashboard, User, Profil, Stock, History, Subscription, Client, Payment } from "@/pages";
 import { createBrowserRouter } from "react-router";
 import ProtectedRoute from "./ProtectedRoute";
 import LoginRoute from "./LoginRoute";
@@ -32,6 +32,21 @@ const router = createBrowserRouter([
             {
                 path: '/history',
                 element: <History />,
+                errorElement: <Error />
+            },
+            {
+                path: '/subscriptions',
+                element: <Subscription />,
+                errorElement: <Error />
+            },
+            {
+                path: '/clients',
+                element: <Client />,
+                errorElement: <Error />
+            },
+            {
+                path: '/payments',
+                element: <Payment />,
                 errorElement: <Error />
             }
         ]

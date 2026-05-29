@@ -1,11 +1,14 @@
 "use client"
 
 import {
+    IconArrowsTransferUpDown,
     IconBuildingWarehouse,
     IconCalendarTime,
     IconInnerShadowTop,
+    IconMoneybagHeart,
     IconTicket,
-    IconUser
+    IconUser,
+    IconUsersGroup
 } from "@tabler/icons-react"
 
 import { NavLinks } from "#components/ui/NavLinks"
@@ -42,6 +45,21 @@ const data = {
             name: "Historique",
             url: "/history",
             icon: IconCalendarTime,
+        },
+        {
+            name: "Abonnements",
+            url: "/subscriptions",
+            icon: IconArrowsTransferUpDown,
+        },
+        {
+            name: "Clients",
+            url: "/clients",
+            icon: IconUsersGroup,
+        },
+        {
+            name: "Paiements",
+            url: "/payments",
+            icon: IconMoneybagHeart,
         }
     ],
 }
