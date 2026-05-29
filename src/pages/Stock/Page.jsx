@@ -137,8 +137,7 @@ const Page = () => {
             <div className="flex flex-row items-center justify-between font-bold mb-6">
                 <h2>Gestion du stock des agents</h2>
                 <div className="flex flex-row">
-                    {/* Explicit update hook injection now handles the fresh state changes */}
-                    <CreateStock onStockAssigned={getStockData} />
+                    {user.role_id < 2 && <CreateStock onStockAssigned={getStockData} />}
                 </div>
             </div>
 
