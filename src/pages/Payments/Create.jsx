@@ -49,9 +49,9 @@ const Create = ({ onPaymentCreated }) => {
         try {
             const [currencyRes, usersRes] = await Promise.all([
                 api.get('/currencies'),
-                api.get('/users') 
+                api.get('/list/agents') 
             ])
-            const currencyData = currencyRes.data.data || currencyRes.data || []
+            const currencyData = currencyRes.data.currencies || currencyRes.data || []
             const usersData = usersRes.data.data || usersRes.data || []
 
             setCurrencies(currencyData)
@@ -190,8 +190,9 @@ const Create = ({ onPaymentCreated }) => {
                         <Select value={formData.payment_method} onValueChange={(val) => handleSelectChange('payment_method', val)}>
                             <SelectTrigger id="payment_method" disabled={isLoading}><SelectValue placeholder="Choisir" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Transfert">Transfert</SelectItem>
-                                <SelectItem value="Espèces">Espèces</SelectItem>
+                                <SelectItem value="Cash">Espèces (Cash)</SelectItem>
+                                <SelectItem value="Transfert">Virement Bancaire</SelectItem>
+                                <SelectItem value="Cheque">Chèque</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
