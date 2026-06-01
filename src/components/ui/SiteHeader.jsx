@@ -2,6 +2,7 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useSelector } from "react-redux"
+import { ThemeToggle } from "#components/ThemeToggle"
 
 export function SiteHeader() {
     const app = useSelector((store) => store.app)
@@ -14,6 +15,9 @@ export function SiteHeader() {
                     className="mx-2 data-[orientation=vertical]:h-4"
                 />
                 <h1 className="text-base font-medium">{app.activeMenu}</h1>
+            </div>
+            <div className="pr-2 lg:pr-4">
+                <ThemeToggle />
             </div>
         </header>
     )

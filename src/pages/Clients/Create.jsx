@@ -19,40 +19,42 @@ import {
 } from "#components/ui/select"
 import api from "#lib/axios"
 
-const Create = ({ onSubscriptionCreated }) => {
+const Create = ({ onClientCreated }) => {
     const [isOpen, setIsOpen] = useState(false)
-    const [currencies, setCurrencies] = useState([])
+    const [subscriptions, setSubscriptions] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
     
     const [formData, setFormData] = useState({
-        bandwidth: '',
-        price: '',
-        currency_id: ''
+        name: '',
+        email: '', // Added field state
+        phone: '',
+        adress: '',
+        subscription_id: '',
+        etat: 'actif'
     })
 
-    const fetchCurrencies = async () => {
+    const fetchSubscriptions = async () => {
         try {
-            const res = await api.get('/currencies')
-            const currencyData = Array.isArray(res.data) ? res.data : res.data.currencies || res.data.data || []
-            setCurrencies(currencyData)
+            const res = await api.get('/subscriptions')
+            const subscriptionData = res.data.subscriptions.data || []
+            setSubscriptions(subscriptionData)
             
-            // Automatically select the first available currency fallback if none has been specified yet
-            if (currencyData.length > 0 && !formData.currency_id) {
+            if (subscriptionData.length > 0 && !formData.subscription_id) {
                 setFormData(prev => ({
                     ...prev,
-                    currency_id: String(currencyData[0].id)
+                    subscription_id: String(subscriptionData[0].id)
                 }))
             }
         } catch (err) {
-            console.error('Error fetching currencies:', err)
-            setCurrencies([])
+            console.error('Error fetching dynamic subscriptions:', err)
+            setSubscriptions([])
         }
     }
 
     useEffect(() => {
         if (isOpen) {
-            fetchCurrencies()
+            fetchSubscriptions()
         }
     }, [isOpen])
 
@@ -70,15 +72,15 @@ const Create = ({ onSubscriptionCreated }) => {
         }
     }
 
-    const handleCurrencyChange = (value) => {
+    const handleSelectChange = (field, value) => {
         setFormData(prev => ({
             ...prev,
-            currency_id: value
+            [field]: value
         }))
-        if (errors.currency_id) {
+        if (errors[field]) {
             setErrors(prev => ({
                 ...prev,
-                currency_id: ''
+                [field]: ''
             }))
         }
     }
@@ -89,23 +91,27 @@ const Create = ({ onSubscriptionCreated }) => {
         setErrors({})
 
         try {
-            // Payload explicitly matches target backend API Subscription validation payload layout 
-            const response = await api.post('/subscriptions', {
-                bandwidth: formData.bandwidth,
-                price: Number(formData.price).toFixed(2), // Match decimal:2 database structure constraint rules
-                currency_id: Number(formData.currency_id)
+            const response = await api.post('/clients', {
+                name: formData.name,
+                email: formData.email, // Sent payload field
+                phone: formData.phone,
+                adress: formData.adress,
+                subscription_id: Number(formData.subscription_id),
+                etat: formData.etat
             })
 
-            // Reset specific input text fields but retain currency configuration choices
             setFormData({
-                bandwidth: '',
-                price: '',
-                currency_id: formData.currency_id
+                name: '',
+                email: '', // Reset logic
+                phone: '',
+                adress: '',
+                subscription_id: formData.subscription_id,
+                etat: 'actif'
             })
 
             setIsOpen(false)
-            if (onSubscriptionCreated) {
-                onSubscriptionCreated(response.data)
+            if (onClientCreated) {
+                onClientCreated(response.data)
             }
         } catch (err) {
             if (err.response?.data?.errors) {
@@ -113,7 +119,7 @@ const Create = ({ onSubscriptionCreated }) => {
             } else if (err.response?.data?.message) {
                 setErrors({ general: err.response.data.message })
             } else {
-                setErrors({ general: "Une erreur est survenue lors de la création de l'abonnement" })
+                setErrors({ general: "Une erreur est survenue lors de l'enregistrement du client" })
             }
         } finally {
             setIsLoading(false)
@@ -122,14 +128,14 @@ const Create = ({ onSubscriptionCreated }) => {
 
     return (
         <Modal
-            trigger={<Button>Créer un abonnement</Button>}
+            trigger={<Button>Ajouter un client</Button>}
             isOpen={isOpen}
             onOpenChange={setIsOpen}
         >
             <DialogHeader>
-                <DialogTitle>Créer un nouvel abonnement</DialogTitle>
+                <DialogTitle>Créer un nouveau profil client</DialogTitle>
                 <DialogDescription>
-                    Remplissez le formulaire ci-dessous pour configurer un nouveau forfait d'abonnement internet.
+                    Remplissez le formulaire ci-dessous pour enregistrer un nouveau client et lui assigner un forfait internet.
                 </DialogDescription>
             </DialogHeader>
             
@@ -140,64 +146,123 @@ const Create = ({ onSubscriptionCreated }) => {
                     </div>
                 )}
 
-                {/* Bandwidth Field */}
+                {/* Name Field */}
                 <div className="space-y-2">
-                    <Label htmlFor="bandwidth">Bande passante / Vitesse</Label>
+                    <Label htmlFor="name">Nom Complet</Label>
                     <Input
-                        id="bandwidth"
-                        name="bandwidth"
+                        id="name"
+                        name="name"
                         type="text"
-                        placeholder="Ex: 10 Mbps, Premium Illimité, etc."
-                        value={formData.bandwidth}
+                        placeholder="Ex: Jean Dupont"
+                        value={formData.name}
                         onChange={handleChange}
                         required
                         disabled={isLoading}
                     />
-                    {errors.bandwidth && (
-                        <p className="text-red-500 text-sm">{errors.bandwidth[0]}</p>
+                    {errors.name && (
+                        <p className="text-red-500 text-sm">{errors.name[0]}</p>
                     )}
                 </div>
 
-                {/* Price and Currency Layout Group */}
+                {/* Email Field */}
+                <div className="space-y-2">
+                    <Label htmlFor="email">Adresse Email</Label>
+                    <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="Ex: jean.dupont@example.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        disabled={isLoading}
+                    />
+                    {errors.email && (
+                        <p className="text-red-500 text-sm">{errors.email[0]}</p>
+                    )}
+                </div>
+
+                {/* Phone Field */}
+                <div className="space-y-2">
+                    <Label htmlFor="phone">Numéro de Téléphone</Label>
+                    <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        placeholder="Ex: +257 ...."
+                        value={formData.phone}
+                        onChange={handleChange}
+                        required
+                        disabled={isLoading}
+                    />
+                    {errors.phone && (
+                        <p className="text-red-500 text-sm">{errors.phone[0]}</p>
+                    )}
+                </div>
+
+                {/* Address Field */}
+                <div className="space-y-2">
+                    <Label htmlFor="adress">Adresse Résidentielle</Label>
+                    <Input
+                        id="adress"
+                        name="adress"
+                        type="text"
+                        placeholder="Ex: Quartier Asiatique, Avenue de la JRR"
+                        value={formData.adress}
+                        onChange={handleChange}
+                        required
+                        disabled={isLoading}
+                    />
+                    {errors.adress && (
+                        <p className="text-red-500 text-sm">{errors.adress[0]}</p>
+                    )}
+                </div>
+
+                {/* Subscription and Status Layout Group */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="price">Prix</Label>
-                        <Input
-                            id="price"
-                            name="price"
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 50.00"
-                            value={formData.price}
-                            onChange={handleChange}
-                            required
-                            disabled={isLoading}
-                        />
-                        {errors.price && (
-                            <p className="text-red-500 text-sm">{errors.price[0]}</p>
+                        <Label htmlFor="subscription_id">Forfait Internet</Label>
+                        <Select 
+                            value={formData.subscription_id} 
+                            onValueChange={(val) => handleSelectChange('subscription_id', val)}
+                            modal={true}
+                        >
+                            <SelectTrigger id="subscription_id" disabled={isLoading}>
+                                <SelectValue placeholder="Sélectionnez" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {subscriptions.map(sub => {
+                                    const currencyStr = sub.currency ? (sub.currency.symbol || sub.currency.code) : ""
+                                    return (
+                                        <SelectItem key={sub.id} value={String(sub.id)}>
+                                            {sub.bandwidth} ({Number(sub.price).toLocaleString('fr-FR')} {currencyStr})
+                                        </SelectItem>
+                                    )
+                                })}
+                            </SelectContent>
+                        </Select>
+                        {errors.subscription_id && (
+                            <p className="text-red-500 text-sm">{errors.subscription_id[0]}</p>
                         )}
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="currency_id">Devise</Label>
+                        <Label htmlFor="etat">État du Compte</Label>
                         <Select 
-                            value={formData.currency_id} 
-                            onValueChange={handleCurrencyChange}
+                            value={formData.etat} 
+                            onValueChange={(val) => handleSelectChange('etat', val)}
                             modal={true}
                         >
-                            <SelectTrigger id="currency_id" disabled={isLoading}>
+                            <SelectTrigger id="etat" disabled={isLoading}>
                                 <SelectValue placeholder="Sélectionnez" />
                             </SelectTrigger>
                             <SelectContent>
-                                {currencies.map(currency => (
-                                    <SelectItem key={currency.id} value={String(currency.id)}>
-                                        {currency.name} ({currency.symbol || currency.code})
-                                    </SelectItem>
-                                ))}
+                                <SelectItem value="Actif">Actif</SelectItem>
+                                <SelectItem value="Inactif">Inactif</SelectItem>
                             </SelectContent>
                         </Select>
-                        {errors.currency_id && (
-                            <p className="text-red-500 text-sm">{errors.currency_id[0]}</p>
+                        {errors.etat && (
+                            <p className="text-red-500 text-sm">{errors.etat[0]}</p>
                         )}
                     </div>
                 </div>
@@ -208,7 +273,7 @@ const Create = ({ onSubscriptionCreated }) => {
                         Annuler
                     </Button>
                     <Button type="submit" disabled={isLoading}>
-                        {isLoading ? 'Création en cours...' : "Créer l'abonnement"}
+                        {isLoading ? 'Enregistrement...' : "Créer le profil"}
                     </Button>
                 </div>
             </form>

@@ -19,52 +19,70 @@ import {
 } from "#components/ui/select"
 import api from "#lib/axios"
 
-const Edit = ({ subscription, onSubscriptionUpdated }) => {
+const Edit = ({ client, onClientUpdated }) => {
     const [isOpen, setIsOpen] = useState(false)
-    const [currencies, setCurrencies] = useState([])
+    const [subscriptions, setSubscriptions] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
     
     const [formData, setFormData] = useState({
-        bandwidth: '',
-        price: '',
-        currency_id: ''
+        name: '',
+        email: '', // Added hydration state
+        phone: '',
+        adress: '',
+        subscription_id: '',
+        etat: 'actif'
     })
 
-    // Hydrate form states cleanly whenever the modal targets a row object mutation
     useEffect(() => {
-        if (isOpen && subscription) {
+        if (isOpen && client) {
             setFormData({
-                bandwidth: subscription.bandwidth || '',
-                price: subscription.price || '',
-                currency_id: subscription.currency_id ? String(subscription.currency_id) : ''
+                name: client.name || '',
+                email: client.email || '', // Field population logic
+                phone: client.phone || '',
+                adress: client.adress || '',
+                subscription_id: client.subscription_id ? String(client.subscription_id) : '',
+                etat: client.etat ? String(client.etat).toLowerCase() : 'actif'
             })
-            fetchCurrencies()
+            fetchSubscriptions()
         }
-    }, [isOpen, subscription])
+    }, [isOpen, client])
 
-    const fetchCurrencies = async () => {
+    const fetchSubscriptions = async () => {
         try {
-            const res = await api.get('/currencies')
-            const currencyData = Array.isArray(res.data) ? res.data : res.data.currencies || res.data.data || []
-            setCurrencies(currencyData)
+            const res = await api.get('/subscriptions')
+            const subscriptionData = res.data.subscriptions.data || []
+            setSubscriptions(subscriptionData)
         } catch (err) {
-            console.error('Error fetching currencies:', err)
+            console.error('Error fetching dynamic subscriptions:', err)
+            setSubscriptions([])
         }
     }
 
     const handleChange = (e) => {
         const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }))
         if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: '' }))
+            setErrors(prev => ({
+                ...prev,
+                [name]: ''
+            }))
         }
     }
 
-    const handleCurrencyChange = (value) => {
-        setFormData(prev => ({ ...prev, currency_id: value }))
-        if (errors.currency_id) {
-            setErrors(prev => ({ ...prev, currency_id: '' }))
+    const handleSelectChange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }))
+        if (errors[field]) {
+            setErrors(prev => ({
+                ...prev,
+                [field]: ''
+            }))
         }
     }
 
@@ -74,15 +92,18 @@ const Edit = ({ subscription, onSubscriptionUpdated }) => {
         setErrors({})
 
         try {
-            const response = await api.put(`/subscriptions/${subscription.id}`, {
-                bandwidth: formData.bandwidth,
-                price: Number(formData.price).toFixed(2),
-                currency_id: Number(formData.currency_id)
+            const response = await api.put(`/clients/${client.id}`, {
+                name: formData.name,
+                email: formData.email, // Data collection
+                phone: formData.phone,
+                adress: formData.adress,
+                subscription_id: Number(formData.subscription_id),
+                etat: formData.etat
             })
 
             setIsOpen(false)
-            if (onSubscriptionUpdated) {
-                onSubscriptionUpdated(response.data)
+            if (onClientUpdated) {
+                onClientUpdated(response.data)
             }
         } catch (err) {
             if (err.response?.data?.errors) {
@@ -90,7 +111,7 @@ const Edit = ({ subscription, onSubscriptionUpdated }) => {
             } else if (err.response?.data?.message) {
                 setErrors({ general: err.response.data.message })
             } else {
-                setErrors({ general: "Une erreur est survenue lors de la mise à jour de l'abonnement" })
+                setErrors({ general: "Une erreur est survenue lors de la mise à jour du client" })
             }
         } finally {
             setIsLoading(false)
@@ -108,9 +129,9 @@ const Edit = ({ subscription, onSubscriptionUpdated }) => {
             onOpenChange={setIsOpen}
         >
             <DialogHeader>
-                <DialogTitle>Modifier l'abonnement</DialogTitle>
+                <DialogTitle>Modifier le profil client</DialogTitle>
                 <DialogDescription>
-                    Modifiez les configurations du forfait d'abonnement internet sélectionné.
+                    Modifiez les informations personnelles ou changez le forfait internet assigné à ce client.
                 </DialogDescription>
             </DialogHeader>
             
@@ -121,64 +142,124 @@ const Edit = ({ subscription, onSubscriptionUpdated }) => {
                     </div>
                 )}
 
+                {/* Name Field */}
                 <div className="space-y-2">
-                    <Label htmlFor="edit-bandwidth">Bande passante / Vitesse</Label>
+                    <Label htmlFor="edit-name">Nom Complet</Label>
                     <Input
-                        id="edit-bandwidth"
-                        name="bandwidth"
+                        id="edit-name"
+                        name="name"
                         type="text"
-                        value={formData.bandwidth}
+                        value={formData.name}
                         onChange={handleChange}
                         required
                         disabled={isLoading}
                     />
-                    {errors.bandwidth && (
-                        <p className="text-red-500 text-sm">{errors.bandwidth[0]}</p>
+                    {errors.name && (
+                        <p className="text-red-500 text-sm">{errors.name[0]}</p>
                     )}
                 </div>
 
+                {/* Email Field */}
+                <div className="space-y-2">
+                    <Label htmlFor="edit-email">Adresse Email</Label>
+                    <Input
+                        id="edit-email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        disabled={isLoading}
+                    />
+                    {errors.email && (
+                        <p className="text-red-500 text-sm">{errors.email[0]}</p>
+                    )}
+                </div>
+
+                {/* Phone Field */}
+                <div className="space-y-2">
+                    <Label htmlFor="edit-phone">Numéro de Téléphone</Label>
+                    <Input
+                        id="edit-phone"
+                        name="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        required
+                        disabled={isLoading}
+                    />
+                    {errors.phone && (
+                        <p className="text-red-500 text-sm">{errors.phone[0]}</p>
+                    )}
+                </div>
+
+                {/* Address Field */}
+                <div className="space-y-2">
+                    <Label htmlFor="edit-adress">Adresse Résidentielle</Label>
+                    <Input
+                        id="edit-adress"
+                        name="adress"
+                        type="text"
+                        value={formData.adress}
+                        onChange={handleChange}
+                        required
+                        disabled={isLoading}
+                    />
+                    {errors.adress && (
+                        <p className="text-red-500 text-sm">{errors.adress[0]}</p>
+                    )}
+                </div>
+
+                {/* Subscription and Status Layout Group */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="edit-price">Prix</Label>
-                        <Input
-                            id="edit-price"
-                            name="price"
-                            type="number"
-                            step="0.01"
-                            value={formData.price}
-                            onChange={handleChange}
-                            required
-                            disabled={isLoading}
-                        />
-                        {errors.price && (
-                            <p className="text-red-500 text-sm">{errors.price[0]}</p>
+                        <Label htmlFor="edit-subscription_id">Forfait Internet</Label>
+                        <Select 
+                            value={formData.subscription_id} 
+                            onValueChange={(val) => handleSelectChange('subscription_id', val)}
+                            modal={true}
+                        >
+                            <SelectTrigger id="edit-subscription_id" disabled={isLoading}>
+                                <SelectValue placeholder="Sélectionnez" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {subscriptions.map(sub => {
+                                    const currencyStr = sub.currency ? (sub.currency.symbol || sub.currency.code) : ""
+                                    return (
+                                        <SelectItem key={sub.id} value={String(sub.id)}>
+                                            {sub.bandwidth} ({Number(sub.price).toLocaleString('fr-FR')} {currencyStr})
+                                        </SelectItem>
+                                    )
+                                })}
+                            </SelectContent>
+                        </Select>
+                        {errors.subscription_id && (
+                            <p className="text-red-500 text-sm">{errors.subscription_id[0]}</p>
                         )}
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="edit-currency_id">Devise</Label>
+                        <Label htmlFor="edit-etat">État du Compte</Label>
                         <Select 
-                            value={formData.currency_id} 
-                            onValueChange={handleCurrencyChange}
+                            value={formData.etat} 
+                            onValueChange={(val) => handleSelectChange('etat', val)}
                             modal={true}
                         >
-                            <SelectTrigger id="edit-currency_id" disabled={isLoading}>
+                            <SelectTrigger id="edit-etat" disabled={isLoading}>
                                 <SelectValue placeholder="Sélectionnez" />
                             </SelectTrigger>
                             <SelectContent>
-                                {currencies.map(currency => (
-                                    <SelectItem key={currency.id} value={String(currency.id)}>
-                                        {currency.name} ({currency.symbol || currency.code})
-                                    </SelectItem>
-                                ))}
+                                <SelectItem value="actif">Actif</SelectItem>
+                                <SelectItem value="inactif">Inactif</SelectItem>
                             </SelectContent>
                         </Select>
-                        {errors.currency_id && (
-                            <p className="text-red-500 text-sm">{errors.currency_id[0]}</p>
+                        {errors.etat && (
+                            <p className="text-red-500 text-sm">{errors.etat[0]}</p>
                         )}
                     </div>
                 </div>
 
+                {/* Foot Action Elements */}
                 <div className="flex gap-4 justify-end mt-6">
                     <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
                         Annuler

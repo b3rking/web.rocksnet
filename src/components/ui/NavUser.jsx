@@ -26,11 +26,12 @@ import {
 import { useDispatch, useSelector } from "react-redux"
 import { Navigate } from "react-router"
 import { logout } from "@/features/auth/authSlice"
+import { useAuth } from "#hooks/useAuth"
 
 export function NavUser() {
     const { isMobile } = useSidebar()
     const auth = useSelector((store) => store.auth)
-    const user = auth.user
+    const user = useAuth()
     const dispatch = useDispatch()
 
     if (!auth.is_auth) {

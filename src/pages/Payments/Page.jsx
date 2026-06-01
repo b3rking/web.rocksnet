@@ -8,7 +8,6 @@ import { fr } from "date-fns/locale"
 import { useApp } from "#hooks/useApp"
 import { useAuth } from "#hooks/useAuth"
 import { Button } from "#components/ui/button"
-// Note: Create and Edit placeholders assumed as per your architecture pattern
 import Create from "./Create" 
 import Edit from "./Edit" 
 
@@ -19,12 +18,11 @@ const Page = () => {
     // Set page layout title
     useApp('Paiements')
     const user = useAuth()
-    const userRole = user?.role?.name // Extracting string role string to match Laravel logic
+    const userRole = user?.role?.name // Extracting role string to match backend logic
 
     const getPaymentData = async () => {
         try {
             const res = await api.get('/payments')
-            // Match standard structure safely supporting fallback layouts
             const resolvedData = res.data.data || res.data.payments || res.data || []
             setPayments(resolvedData)
             setIsLoading(false)
@@ -39,7 +37,7 @@ const Page = () => {
 
         try {
             await api.delete(`/payments/${id}`)
-            getPaymentData() // Refresh listing dynamically on execution success
+            getPaymentData() 
         } catch (err) {
             console.error('Error deleting payment:', err)
             alert('Une erreur est survenue lors de la suppression.')
@@ -50,7 +48,6 @@ const Page = () => {
         getPaymentData()
     }, [])
 
-    // Prevent component recreation across global re-renders
     const columns = useMemo(() => [
         {
             id: "amount",
@@ -93,19 +90,42 @@ const Page = () => {
             )
         },
         {
+            id: "target_entity",
+            header: "Payez par",
+            cell: ({ row }) => {
+                const type = row.original.payment_type
+                const agent = row.original.agent
+                const invoice = row.original.invoice
+                
+                if (type === 'Subscription') {
+                    return (
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium">
+                                {/* Client #{invoice?.client_id || row.original.client_id || "-"} */}
+                                { invoice?.client?.name || "-"}
+                            </span>
+                            {invoice?.period && (
+                                <span className="text-xs text-muted-foreground italic">
+                                    Période: {invoice.period}
+                                </span>
+                            )}
+                        </div>
+                    )
+                }
+
+                if (type === 'Ticket') {
+                    return <span className="text-sm text-stone-600">{agent?.name || "Agent non spécifié"}</span>
+                }
+
+                return <span className="text-xs text-muted-foreground">—</span>
+            }
+        },
+        {
             id: "saved_by",
             header: "Enregistré par",
             cell: ({ row }) => {
                 const operator = row.original.saved_by_user || row.original.saved_by
                 return <span className="text-sm">{operator?.name || "-"}</span>
-            }
-        },
-        {
-            id: "agent",
-            header: "Agent assigné",
-            cell: ({ row }) => {
-                const agent = row.original.agent
-                return <span className="text-sm text-stone-600">{agent?.name || "-"}</span>
             }
         },
         {
@@ -160,10 +180,7 @@ const Page = () => {
             <div className="flex flex-row items-center justify-between font-bold mb-6">
                 <h2>Gestion des Paiements Comptables</h2>
                 <div className="flex flex-row">
-                    {/* Only admin and super agent can create transactions */}
-                    {/* {['admin', 'super agent'].includes(userRole) && ( */}
-                        <Create onPaymentCreated={getPaymentData} />
-                    {/* )} */}
+                    <Create onPaymentCreated={getPaymentData} />
                 </div>
             </div>
 
