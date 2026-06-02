@@ -3,6 +3,12 @@
 import { DataTable } from "#components/ui/DataTable"
 import { Input } from "#components/ui/input"
 import { Label } from "#components/ui/label"
+import {
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+} from "#components/ui/dialog"
+import { Modal } from "#components/ui/Modal"
 import api from "#lib/axios"
 import { useEffect, useState, useMemo } from "react"
 import { format, parseISO } from "date-fns"
@@ -12,6 +18,7 @@ import CreateStock from "./CreateStock"
 import { useAuth } from "#hooks/useAuth"
 import SaleStock from "./SaleStock"
 import TableSkeleton from "#components/ui/TableSkeleton"
+import { Button } from "#components/ui/button"
 
 const Page = () => {
     const [stocks, setStocks] = useState([])
@@ -25,6 +32,12 @@ const Page = () => {
     const [sorting, setSorting] = useState([{ id: 'updated_at', desc: true }])
     const [filters, setFilters] = useState({ search: '' })
     const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    // --- ÉTATS POUR LA SUPPRESSION (MODAL) ---
+    const [deleteStock, setDeleteStock] = useState(null)
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+    const [deleteIsLoading, setDeleteIsLoading] = useState(false)
+    const [deleteError, setDeleteError] = useState("")
 
     useApp('Stock')
     const user = useAuth()
@@ -51,8 +64,7 @@ const Page = () => {
             }
 
             const res = await api.get(url)
-            
-            // Extraction des données paginées depuis la structure Laravel standard
+
             const resolvedData = res.data.data || []
             setStocks(resolvedData)
             setPageCount(res.data.last_page || 0)
@@ -60,6 +72,23 @@ const Page = () => {
         } catch (err) {
             setIsLoading(false)
             console.error('Error fetching stock:', err)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!deleteStock) return
+        setDeleteIsLoading(true)
+        setDeleteError("")
+        try {
+            await api.post(`/stock/destroy/${deleteStock.id}`)
+            setIsDeleteOpen(false)
+            setDeleteStock(null)
+            getStockData()
+        } catch (err) {
+            console.error('Error deleting stock:', err)
+            setDeleteError(err.response?.data?.message || 'Une erreur est survenue lors de la suppression.')
+        } finally {
+            setDeleteIsLoading(false)
         }
     }
 
@@ -117,8 +146,8 @@ const Page = () => {
                 const profil = row.original.profil
                 const amount = profil?.price
                 const currencyObj = profil?.currency
-                const currencyStr = currencyObj 
-                    ? (currencyObj.symbol || currencyObj.code || currencyObj.name) 
+                const currencyStr = currencyObj
+                    ? (currencyObj.symbol || currencyObj.code || currencyObj.name)
                     : ""
 
                 if (amount === undefined || amount === null) return "-"
@@ -143,11 +172,10 @@ const Page = () => {
             cell: ({ getValue }) => {
                 const qty = getValue()
                 return (
-                    <span className={`font-bold transition-colors ${
-                        qty <= 5 
-                            ? "text-red-600 dark:text-red-400" 
-                            : "text-emerald-600 dark:text-emerald-400"
-                    }`}>
+                    <span className={`font-bold transition-colors ${qty <= 5
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-emerald-600 dark:text-emerald-400"
+                        }`}>
                         {qty} {qty > 1 ? "tickets" : "ticket"}
                     </span>
                 )
@@ -166,7 +194,7 @@ const Page = () => {
                         {format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })}
                     </span>
                 )
-            },
+            }
         },
         {
             id: "actions",
@@ -174,18 +202,38 @@ const Page = () => {
             enableSorting: false,
             cell: ({ row }) => {
                 const rowData = row.original
+
+                const isAdmin = user?.role?.name?.toLowerCase() === 'admin' || user?.role_id === 1
                 const canSell = user?.role_id > 1
 
-                if (!canSell) {
+                if (!isAdmin && !canSell) {
                     return <span className="text-xs text-muted-foreground/40">—</span>
                 }
 
                 return (
                     <div className="flex gap-2">
-                        <SaleStock 
-                            profil={rowData} 
-                            onSaleRecorded={getStockData} 
-                        />
+                        {/* Action de vente pour les agents */}
+                        {canSell && (
+                            <SaleStock
+                                profil={rowData}
+                                onSaleRecorded={getStockData}
+                            />
+                        )}
+
+                        {/* Action de suppression exclusive aux Admins */}
+                        {isAdmin && (
+                            <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                    setDeleteStock(rowData)
+                                    setDeleteError("")
+                                    setIsDeleteOpen(true)
+                                }}
+                            >
+                                Supprimer
+                            </Button>
+                        )}
                     </div>
                 )
             },
@@ -207,7 +255,7 @@ const Page = () => {
                 />
             </div>
         </div>
-    ), [filters])
+    ), [filters.search])
 
     return (
         <div className="text-foreground bg-background transition-colors duration-200">
@@ -224,9 +272,9 @@ const Page = () => {
                 <TableSkeleton />
             ) : (
                 <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
-                    <DataTable 
-                        columns={columns} 
-                        data={stocks} 
+                    <DataTable
+                        columns={columns}
+                        data={stocks}
                         manualPagination={true}
                         isLoading={isLoading}
                         pageCount={pageCount}
@@ -237,6 +285,33 @@ const Page = () => {
                         filtersComponent={filtersBar}
                     />
                 </div>
+            )}
+
+            {/* Delete Modal */}
+            {deleteStock && (
+                <Modal trigger={null} isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                    <DialogHeader>
+                        <DialogTitle>Supprimer la ligne de stock</DialogTitle>
+                        <DialogDescription>
+                            Êtes-vous sûr de vouloir supprimer la ligne de stock de <span className="font-semibold text-stone-900 dark:text-stone-100">{deleteStock.user?.name}</span> pour le profil <span className="font-semibold text-stone-900 dark:text-stone-100">{deleteStock.profil?.name}</span> ? Cette action ne peut pas être annulée.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    {deleteError && (
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm mt-4">
+                            {deleteError}
+                        </div>
+                    )}
+                    
+                    <div className="flex gap-4 justify-end mt-6">
+                        <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={deleteIsLoading}>
+                            Annuler
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete} disabled={deleteIsLoading}>
+                            {deleteIsLoading ? 'Suppression...' : 'Supprimer'}
+                        </Button>
+                    </div>
+                </Modal>
             )}
         </div>
     )

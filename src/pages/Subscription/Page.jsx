@@ -3,6 +3,12 @@
 import { DataTable } from "#components/ui/DataTable"
 import { Input } from "#components/ui/input"
 import { Label } from "#components/ui/label"
+import {
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+} from "#components/ui/dialog"
+import { Modal } from "#components/ui/Modal"
 import api from "#lib/axios"
 import { useEffect, useState, useMemo } from "react"
 import { format, parseISO } from "date-fns"
@@ -26,6 +32,12 @@ const Page = () => {
     const [sorting, setSorting] = useState([{ id: 'created_at', desc: true }])
     const [filters, setFilters] = useState({ search: '' })
     const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    // --- ÉTATS POUR LA SUPPRESSION (MODAL) ---
+    const [deleteSub, setDeleteSub] = useState(null)
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+    const [deleteIsLoading, setDeleteIsLoading] = useState(false)
+    const [deleteError, setDeleteError] = useState("")
 
     useApp('Abonnements')
     const user = useAuth()
@@ -64,15 +76,20 @@ const Page = () => {
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Voulez-vous vraiment supprimer cet abonnement ?')) return
-
+    const handleDelete = async () => {
+        if (!deleteSub) return
+        setDeleteIsLoading(true)
+        setDeleteError("")
         try {
-            await api.delete(`/subscriptions/${id}`)
+            await api.delete(`/subscriptions/${deleteSub.id}`)
+            setIsDeleteOpen(false)
+            setDeleteSub(null)
             getSubscriptionData() 
         } catch (err) {
             console.error('Error deleting subscription:', err)
-            alert('Une erreur est survenue lors de la suppression.')
+            setDeleteError(err.response?.data?.message || 'Une erreur est survenue lors de la suppression.')
+        } finally {
+            setDeleteIsLoading(false)
         }
     }
 
@@ -129,7 +146,7 @@ const Page = () => {
                         {format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })}
                     </span>
                 )
-            },
+            }
         },
         {
             id: "actions",
@@ -151,7 +168,11 @@ const Page = () => {
                         <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(rowData.id)}
+                            onClick={() => {
+                                setDeleteSub(rowData)
+                                setDeleteError("")
+                                setIsDeleteOpen(true)
+                            }}
                         >
                             Supprimer
                         </Button>
@@ -176,7 +197,7 @@ const Page = () => {
                 />
             </div>
         </div>
-    ), [filters])
+    ), [filters.search])
 
     return (
         <div className="text-foreground bg-background transition-colors duration-200">
@@ -206,6 +227,33 @@ const Page = () => {
                         filtersComponent={filtersBar}
                     />
                 </div>
+            )}
+
+            {/* Modal de Suppression */}
+            {deleteSub && (
+                <Modal trigger={null} isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                    <DialogHeader>
+                        <DialogTitle>Supprimer le forfait</DialogTitle>
+                        <DialogDescription>
+                            Êtes-vous sûr de vouloir supprimer définitivement le forfait <span className="font-semibold text-stone-900 dark:text-stone-100">{deleteSub.bandwidth}</span> ? Cette action ne peut pas être annulée.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteError && (
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm mt-4">
+                            {deleteError}
+                        </div>
+                    )}
+
+                    <div className="flex gap-4 justify-end mt-6">
+                        <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={deleteIsLoading}>
+                            Annuler
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete} disabled={deleteIsLoading}>
+                            {deleteIsLoading ? 'Suppression...' : 'Supprimer'}
+                        </Button>
+                    </div>
+                </Modal>
             )}
         </div>
     )

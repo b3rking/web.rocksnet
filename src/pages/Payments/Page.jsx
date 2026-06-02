@@ -10,6 +10,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "#components/ui/select"
+import {
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+} from "#components/ui/dialog"
+import { Modal } from "#components/ui/Modal"
 import api from "#lib/axios"
 import { useEffect, useState, useMemo } from "react"
 import { format, parseISO } from "date-fns"
@@ -33,6 +39,12 @@ const Page = () => {
     const [sorting, setSorting] = useState([{ id: 'created_at', desc: true }])
     const [filters, setFilters] = useState({ search: '', method: 'all', type: 'all' })
     const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    // --- ÉTATS POUR LA SUPPRESSION (MODAL) ---
+    const [deletePayment, setDeletePayment] = useState(null)
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+    const [deleteIsLoading, setDeleteIsLoading] = useState(false)
+    const [deleteError, setDeleteError] = useState("")
 
     // Set page layout title
     useApp('Paiements')
@@ -73,15 +85,20 @@ const Page = () => {
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Voulez-vous vraiment supprimer cet historique de paiement ?')) return
-
+    const handleDelete = async () => {
+        if (!deletePayment) return
+        setDeleteIsLoading(true)
+        setDeleteError("")
         try {
-            await api.delete(`/payments/${id}`)
+            await api.delete(`/payments/${deletePayment.id}`)
+            setIsDeleteOpen(false)
+            setDeletePayment(null)
             getPaymentData() 
         } catch (err) {
             console.error('Error deleting payment:', err)
-            alert('Une erreur est survenue lors de la suppression.')
+            setDeleteError(err.response?.data?.message || 'Une erreur est survenue lors de la suppression.')
+        } finally {
+            setDeleteIsLoading(false)
         }
     }
 
@@ -90,6 +107,41 @@ const Page = () => {
     }, [pagination.pageIndex, pagination.pageSize, sorting, debouncedSearch, filters.method, filters.type])
 
     const columns = useMemo(() => [
+        {
+            id: "target_entity",
+            header: "Payé par",
+            enableSorting: true, // Géré par le backend via leftJoin dynamique
+            cell: ({ row }) => {
+                const type = row.original.payment_type
+                const agent = row.original.agent
+                const invoice = row.original.invoice
+                
+                if (type === 'Subscription') {
+                    return (
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium text-stone-900 dark:text-stone-200">
+                                {invoice?.client?.name || "-"}
+                            </span>
+                            {invoice?.period && (
+                                <span className="text-xs text-muted-foreground italic">
+                                    Période: {invoice.period}
+                                </span>
+                            )}
+                        </div>
+                    )
+                }
+
+                if (type === 'Ticket') {
+                    return (
+                        <span className="text-sm text-stone-600 dark:text-stone-300">
+                            {agent?.name || "Agent non spécifié"}
+                        </span>
+                    )
+                }
+
+                return <span className="text-xs text-muted-foreground">—</span>
+            }
+        },
         {
             id: "amount",
             accessorKey: "amount",
@@ -135,41 +187,6 @@ const Page = () => {
             )
         },
         {
-            id: "target_entity",
-            header: "Payé par",
-            enableSorting: true, // Géré par le backend via leftJoin dynamique
-            cell: ({ row }) => {
-                const type = row.original.payment_type
-                const agent = row.original.agent
-                const invoice = row.original.invoice
-                
-                if (type === 'Subscription') {
-                    return (
-                        <div className="flex flex-col">
-                            <span className="text-sm font-medium text-stone-900 dark:text-stone-200">
-                                {invoice?.client?.name || "-"}
-                            </span>
-                            {invoice?.period && (
-                                <span className="text-xs text-muted-foreground italic">
-                                    Période: {invoice.period}
-                                </span>
-                            )}
-                        </div>
-                    )
-                }
-
-                if (type === 'Ticket') {
-                    return (
-                        <span className="text-sm text-stone-600 dark:text-stone-300">
-                            {agent?.name || "Agent non spécifié"}
-                        </span>
-                    )
-                }
-
-                return <span className="text-xs text-muted-foreground">—</span>
-            }
-        },
-        {
             id: "saved_by",
             header: "Enregistré par",
             enableSorting: false,
@@ -213,18 +230,22 @@ const Page = () => {
 
                 return (
                     <div className="flex gap-2">
-                        {canUpdate && (
+                        {/* {canUpdate && (
                             <Edit
                                 payment={rowData}
                                 onPaymentUpdated={getPaymentData}
                             />
-                        )}
+                        )} */}
 
                         {canDelete && (
                             <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => handleDelete(rowData.id)}
+                                onClick={() => {
+                                    setDeletePayment(rowData)
+                                    setDeleteError("")
+                                    setIsDeleteOpen(true)
+                                }}
                             >
                                 Supprimer
                             </Button>
@@ -319,6 +340,37 @@ const Page = () => {
                         filtersComponent={filtersBar}
                     />
                 </div>
+            )}
+
+            {/* Modal de Confirmation de Suppression */}
+            {deletePayment && (
+                <Modal trigger={null} isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                    <DialogHeader>
+                        <DialogTitle>Supprimer l'historique de paiement</DialogTitle>
+                        <DialogDescription>
+                            Êtes-vous sûr de vouloir supprimer définitivement cette transaction d'un montant de{" "}
+                            <span className="font-semibold text-stone-900 dark:text-stone-100">
+                                {Number(deletePayment.amount).toLocaleString('fr-FR')} {deletePayment.currency?.symbol || deletePayment.currency?.code || ""}
+                            </span>{" "}
+                            ? Cette action est irréversible.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteError && (
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm mt-4">
+                            {deleteError}
+                        </div>
+                    )}
+
+                    <div className="flex gap-4 justify-end mt-6">
+                        <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={deleteIsLoading}>
+                            Annuler
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete} disabled={deleteIsLoading}>
+                            {deleteIsLoading ? 'Suppression...' : 'Supprimer'}
+                        </Button>
+                    </div>
+                </Modal>
             )}
         </div>
     )

@@ -249,8 +249,8 @@ const Edit = ({ client, onClientUpdated }) => {
                                 <SelectValue placeholder="Sélectionnez" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="actif">Actif</SelectItem>
-                                <SelectItem value="inactif">Inactif</SelectItem>
+                                <SelectItem value="Actif">Actif</SelectItem>
+                                <SelectItem value="Inactif">Inactif</SelectItem>
                             </SelectContent>
                         </Select>
                         {errors.etat && (

@@ -10,6 +10,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "#components/ui/select"
+import {
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+} from "#components/ui/dialog"
+import { Modal } from "#components/ui/Modal"
 import api from "#lib/axios"
 import { useEffect, useState, useMemo } from "react"
 import { format, parseISO } from "date-fns"
@@ -33,6 +39,12 @@ const Page = () => {
     const [sorting, setSorting] = useState([{ id: 'created_at', desc: true }])
     const [filters, setFilters] = useState({ search: '', etat: 'all' })
     const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    // --- ÉTATS POUR LA SUPPRESSION (MODAL) ---
+    const [deleteClient, setDeleteClient] = useState(null)
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+    const [deleteIsLoading, setDeleteIsLoading] = useState(false)
+    const [deleteError, setDeleteError] = useState("")
 
     // Set page layout title
     useApp('Clients')
@@ -72,15 +84,20 @@ const Page = () => {
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Voulez-vous vraiment supprimer ce profil client ?')) return
-
+    const handleDelete = async () => {
+        if (!deleteClient) return
+        setDeleteIsLoading(true)
+        setDeleteError("")
         try {
-            await api.delete(`/clients/${id}`)
+            await api.delete(`/clients/${deleteClient.id}`)
+            setIsDeleteOpen(false)
+            setDeleteClient(null)
             getClientData() 
         } catch (err) {
             console.error('Error deleting client:', err)
-            alert('Une erreur est survenue lors de la suppression.')
+            setDeleteError(err.response?.data?.message || 'Une erreur est survenue lors de la suppression.')
+        } finally {
+            setDeleteIsLoading(false)
         }
     }
 
@@ -189,7 +206,7 @@ const Page = () => {
                         {format(parseISO(rawDate), "dd/MM/yyyy", { locale: fr })}
                     </span>
                 )
-            },
+            }
         },
         {
             id: "actions",
@@ -218,7 +235,11 @@ const Page = () => {
                             <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => handleDelete(rowData.id)}
+                                onClick={() => {
+                                    setDeleteClient(rowData)
+                                    setDeleteError("")
+                                    setIsDeleteOpen(true)
+                                }}
                             >
                                 Supprimer
                             </Button>
@@ -263,7 +284,7 @@ const Page = () => {
                 </Select>
             </div>
         </div>
-    ), [filters])
+    ), [filters.search, filters.etat])
 
     return (
         <div className="text-foreground bg-background transition-colors duration-200">
@@ -293,6 +314,33 @@ const Page = () => {
                         filtersComponent={filtersBar}
                     />
                 </div>
+            )}
+
+            {/* Modal de Confirmation de Suppression */}
+            {deleteClient && (
+                <Modal trigger={null} isOpen={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                    <DialogHeader>
+                        <DialogTitle>Supprimer le profil client</DialogTitle>
+                        <DialogDescription>
+                            Êtes-vous sûr de vouloir supprimer définitivement le profil de <span className="font-semibold text-stone-900 dark:text-stone-100">{deleteClient.name}</span> ? Cette action effacera ses données et est irréversible.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteError && (
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm mt-4">
+                            {deleteError}
+                        </div>
+                    )}
+
+                    <div className="flex gap-4 justify-end mt-6">
+                        <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={deleteIsLoading}>
+                            Annuler
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete} disabled={deleteIsLoading}>
+                            {deleteIsLoading ? 'Suppression...' : 'Supprimer'}
+                        </Button>
+                    </div>
+                </Modal>
             )}
         </div>
     )
