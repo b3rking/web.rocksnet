@@ -23,35 +23,70 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-// 1. Optional: Import Lucide icons for professional styling
-// If you don't have lucide-react installed, you can replace these with text like "<<" or ">>"
 import { 
     ChevronLeft, 
     ChevronRight, 
     ChevronsLeft, 
     ChevronsRight 
 } from "lucide-react"
+// Importation du Spinner
+import { TableSpinner } from "@/components/ui/TableSpinner"
 
 export function DataTable({
     columns,
     data,
+    isLoading = false, // <-- Nouvelle prop ici
+    manualPagination = false,
+    pageCount,
+    paginationState,
+    onPaginationChange,
 }) {
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: {
+        getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
+        manualPagination: manualPagination,
+        pageCount: manualPagination ? pageCount : undefined,
+        onPaginationChange: onPaginationChange,
+        state: {
+            pagination: paginationState,
+        },
+        initialState: !manualPagination ? {
             pagination: {
                 pageSize: 10,
             },
-        },
+        } : undefined,
     })
+
+    const canPreviousPage = manualPagination 
+        ? paginationState.pageIndex > 0 
+        : table.getCanPreviousPage()
+
+    const canNextPage = manualPagination 
+        ? (pageCount ? paginationState.pageIndex < pageCount - 1 : false)
+        : table.getCanNextPage()
+
+    const currentPageIndex = manualPagination 
+        ? paginationState.pageIndex 
+        : table.getState().pagination.pageIndex
+
+    const totalPages = manualPagination 
+        ? (pageCount || 1) 
+        : (table.getPageCount() || 1)
+
+    const currentPageSize = manualPagination 
+        ? paginationState.pageSize 
+        : table.getState().pagination.pageSize
 
     return (
         <div className="space-y-4">
-            {/* Table Container */}
-            <div className="overflow-hidden rounded-md border">
+            {/* Table Container - AJOUT de la classe "relative" ici */}
+            <div className="overflow-hidden rounded-md border relative">
+                
+                {/* Si isLoading est vrai, le spinner se déploie par-dessus la table */}
+                {isLoading && <TableSpinner />}
+
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -94,19 +129,16 @@ export function DataTable({
                 </Table>
             </div>
 
-            {/* Advanced Pagination UI */}
+            {/* Pagination Controls... (inchangé) */}
             <div className="flex items-center justify-between px-2 py-1">
-                {/* Left side: Rows per page selector */}
                 <div className="flex items-center space-x-2">
                     <p className="text-sm font-medium text-muted-foreground">Lignes par page</p>
                     <Select
-                        value={String(table.getState().pagination.pageSize)}
-                        onValueChange={(value) => {
-                            table.setPageSize(Number(value))
-                        }}
+                        value={String(currentPageSize)}
+                        onValueChange={(value) => table.setPageSize(Number(value))}
                     >
                         <SelectTrigger className="h-8 w-[70px]">
-                            <SelectValue value={table.getState().pagination.pageSize} />
+                            <SelectValue value={currentPageSize} />
                         </SelectTrigger>
                         <SelectContent side="top">
                             {[5, 10, 20, 30, 40, 50].map((pageSize) => (
@@ -118,57 +150,22 @@ export function DataTable({
                     </Select>
                 </div>
 
-                {/* Right side: Current Page counter & Navigation buttons */}
                 <div className="flex items-center space-x-6 lg:space-x-8">
-                    {/* Current Page Index */}
                     <div className="flex w-[100px] items-center justify-center text-sm font-medium text-muted-foreground">
-                        Page {table.getState().pagination.pageIndex + 1} sur{" "}
-                        {table.getPageCount() || 1}
+                        Page {currentPageIndex + 1} sur {totalPages}
                     </div>
 
-                    {/* Controls Controls */}
                     <div className="flex items-center space-x-2">
-                        {/* Go to First Page */}
-                        <Button
-                            variant="outline"
-                            className="hidden h-8 w-8 p-0 lg:flex"
-                            onClick={() => table.setPageIndex(0)}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <span className="sr-only">Première page</span>
+                        <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => table.setPageIndex(0)} disabled={!canPreviousPage || isLoading}>
                             <ChevronsLeft className="h-4 w-4" />
                         </Button>
-
-                        {/* Go to Previous Page */}
-                        <Button
-                            variant="outline"
-                            className="h-8 w-8 p-0"
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <span className="sr-only">Page précédente</span>
+                        <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.previousPage()} disabled={!canPreviousPage || isLoading}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
-
-                        {/* Go to Next Page */}
-                        <Button
-                            variant="outline"
-                            className="h-8 w-8 p-0"
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <span className="sr-only">Page suivante</span>
+                        <Button variant="outline" className="h-8 w-8 p-0" onClick={() => table.nextPage()} disabled={!canNextPage || isLoading}>
                             <ChevronRight className="h-4 w-4" />
                         </Button>
-
-                        {/* Go to Last Page */}
-                        <Button
-                            variant="outline"
-                            className="hidden h-8 w-8 p-0 lg:flex"
-                            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <span className="sr-only">Dernière page</span>
+                        <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => table.setPageIndex(totalPages - 1)} disabled={!canNextPage || isLoading}>
                             <ChevronsRight className="h-4 w-4" />
                         </Button>
                     </div>
