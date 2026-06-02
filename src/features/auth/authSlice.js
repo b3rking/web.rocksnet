@@ -15,7 +15,7 @@ export const authenticate = createAsyncThunk(
                 email,
                 password,
             });
-            console.log("Login response:", res.data);
+            // console.log("Login response:", res.data);
             localStorage.setItem(
                 "rocksnet_access_token",
                 res.data.access_token,
