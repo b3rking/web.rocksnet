@@ -37,7 +37,7 @@ const Page = () => {
 
         try {
             await api.delete(`/clients/${id}`)
-            getClientData() // Refresh listing dynamically on execution success
+            getClientData() 
         } catch (err) {
             console.error('Error deleting client:', err)
             alert('Une erreur est survenue lors de la suppression.')
@@ -48,33 +48,46 @@ const Page = () => {
         getClientData()
     }, [])
 
-    // Prevent component recreation across global re-renders
     const columns = useMemo(() => [
         {
             id: "name",
             accessorKey: "name",
             header: "Nom Complet",
             cell: ({ getValue }) => (
-                <span className="font-semibold text-stone-900">{getValue() || "-"}</span>
+                <span className="font-semibold text-stone-900 dark:text-stone-100">
+                    {getValue() || "-"}
+                </span>
             )
         },
         {
             id: "phone",
             accessorKey: "phone",
             header: "Téléphone",
-            cell: ({ getValue }) => <span className="text-sm text-stone-700">{getValue() || "-"}</span>
+            cell: ({ getValue }) => (
+                <span className="text-sm text-stone-600 dark:text-stone-400">
+                    {getValue() || "-"}
+                </span>
+            )
         },
         {
             id: "email",
             accessorKey: "email",
             header: "Email",
-            cell: ({ getValue }) => <span className="text-sm text-stone-700">{getValue() || "-"}</span>
+            cell: ({ getValue }) => (
+                <span className="text-sm text-stone-600 dark:text-stone-400">
+                    {getValue() || "-"}
+                </span>
+            )
         },
         {
             id: "adress",
             accessorKey: "adress",
             header: "Adresse",
-            cell: ({ getValue }) => <span className="text-sm text-stone-600 line-clamp-1">{getValue() || "-"}</span>
+            cell: ({ getValue }) => (
+                <span className="text-sm text-stone-500 dark:text-stone-400 line-clamp-1">
+                    {getValue() || "-"}
+                </span>
+            )
         },
         {
             id: "subscription",
@@ -89,7 +102,7 @@ const Page = () => {
 
                 return (
                     <div className="flex flex-col">
-                        <span className="font-medium text-sm text-stone-800">
+                        <span className="font-medium text-sm text-stone-800 dark:text-stone-200">
                             {subscription.bandwidth || "Vitesse inconnue"}
                         </span>
                         {price !== undefined && price !== null && (
@@ -110,7 +123,7 @@ const Page = () => {
                 if (!status) return "-"
 
                 return (
-                    <span className="capitalize inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-800">
+                    <span className="capitalize inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-200">
                         {status.toLowerCase()}
                     </span>
                 )
@@ -123,7 +136,11 @@ const Page = () => {
             cell: ({ getValue }) => {
                 const rawDate = getValue()
                 if (!rawDate) return "-"
-                return format(parseISO(rawDate), "dd/MM/yyyy", { locale: fr })
+                return (
+                    <span className="text-stone-600 dark:text-stone-400 text-sm">
+                        {format(parseISO(rawDate), "dd/MM/yyyy", { locale: fr })}
+                    </span>
+                )
             },
         },
         {
@@ -136,7 +153,7 @@ const Page = () => {
                 const canDelete = userRole === 'admin'
 
                 if (!canUpdate && !canDelete) {
-                    return <span className="text-xs text-muted-foreground/50">—</span>
+                    return <span className="text-xs text-muted-foreground/40">—</span>
                 }
 
                 return (
@@ -164,23 +181,24 @@ const Page = () => {
     ], [userRole]) 
 
     return (
-        <div>
+        <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
-                <h2>Gestion des Profils Clients</h2>
+                <h2 className="text-xl tracking-tight text-stone-900 dark:text-stone-50">
+                    Gestion des Profils Clients
+                </h2>
                 <div className="flex flex-row">
-                    {/* Explicitly authorized roles can register new clients */}
-                    {/* {['admin', 'super agent'].includes(userRole) && ( */}
-                        <Create onClientCreated={getClientData} />
-                    {/* )} */}
+                    <Create onClientCreated={getClientData} />
                 </div>
             </div>
 
             {isLoading ? (
-                <div className="text-sm text-muted-foreground animate-pulse">
+                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
                     Chargement de la liste des clients en cours...
                 </div>
             ) : (
-                <DataTable columns={columns} data={clients} />
+                <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+                    <DataTable columns={columns} data={clients} />
+                </div>
             )}
         </div>
     )

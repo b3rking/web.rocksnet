@@ -32,7 +32,6 @@ const Page = () => {
         getHistoryData()
     }, [])
 
-    // useMemo prevents component identity recreation on parent form typing actions
     const columns = useMemo(() => [
         {
             id: "agent",
@@ -41,8 +40,12 @@ const Page = () => {
                 const agentObj = row.original.agent
                 return (
                     <div className="flex flex-col">
-                        <span className="font-medium">{agentObj?.name || "Inconnu"}</span>
-                        <span className="text-xs text-muted-foreground">{agentObj?.email || "-"}</span>
+                        <span className="font-medium text-stone-900 dark:text-stone-100">
+                            {agentObj?.name || "Inconnu"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                            {agentObj?.email || "-"}
+                        </span>
                     </div>
                 )
             }
@@ -51,7 +54,11 @@ const Page = () => {
             id: "profil_name",
             header: "Profil Technique",
             cell: ({ row }) => {
-                return <span className="font-medium">{row.original.profil?.name || "-"}</span>
+                return (
+                    <span className="font-medium text-stone-800 dark:text-stone-200">
+                        {row.original.profil?.name || "-"}
+                    </span>
+                )
             }
         },
         {
@@ -60,15 +67,13 @@ const Page = () => {
             header: "Opération",
             cell: ({ getValue }) => {
                 const action = (getValue() || "").toLowerCase()
-                
-                // Maps directly to your backend ActionEnum values
                 const isReduction = action === 'reduction' || action === 'sale' || action === 'vente'
                 
                 return (
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold transition-colors ${
                         isReduction 
-                            ? "bg-red-100 text-red-800"          // Red badge for sales/reductions
-                            : "bg-emerald-100 text-emerald-800"  // Green badge for attributions/recharges
+                            ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 border border-red-200/20" 
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/20"
                     }`}>
                         {isReduction ? "Vente" : "Attribution"}
                     </span>
@@ -82,10 +87,14 @@ const Page = () => {
             cell: ({ row, getValue }) => {
                 const qty = getValue()
                 const action = (row.original.action || "").toLowerCase()
-                const isReduction = action === 'reduction'
+                const isReduction = action === 'reduction' || action === 'sale' || action === 'vente'
 
                 return (
-                    <span className={`font-bold ${isReduction ? "text-red-600" : "text-emerald-600"}`}>
+                    <span className={`font-bold transition-colors ${
+                        isReduction 
+                            ? "text-red-600 dark:text-red-400" 
+                            : "text-emerald-600 dark:text-emerald-400"
+                    }`}>
                         {isReduction ? "-" : "+"}{qty} {qty > 1 ? "tickets" : "ticket"}
                     </span>
                 )
@@ -98,26 +107,32 @@ const Page = () => {
             cell: ({ getValue }) => {
                 const rawDate = getValue()
                 if (!rawDate) return "-"
-                return format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })
+                return (
+                    <span className="text-stone-600 dark:text-stone-400 text-sm">
+                        {format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })}
+                    </span>
+                )
             },
         },
-    ], [user]) // Re-run calculations ONLY if the authenticated identity context shifts
+    ], [user])
 
     return (
-        <div>
+        <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
-                <h2>Historique des mouvements du stock</h2>
-                <div className="flex flex-row">
-                    {/* Keeps alignment balanced with your stock dashboard layout */}
-                </div>
+                <h2 className="text-xl tracking-tight text-stone-900 dark:text-stone-50">
+                    Historique des mouvements du stock
+                </h2>
+                <div className="flex flex-row" />
             </div>
 
             {isLoading ? (
-                <div className="text-sm text-muted-foreground animate-pulse">
+                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
                     Chargement de l'historique en cours...
                 </div>
             ) : (
-                <DataTable columns={columns} data={history} />
+                <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+                    <DataTable columns={columns} data={history} />
+                </div>
             )}
         </div>
     )

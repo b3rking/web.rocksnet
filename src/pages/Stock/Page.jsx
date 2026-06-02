@@ -34,7 +34,6 @@ const Page = () => {
         getStockData()
     }, [])
 
-    // useMemo prevents component identity recreation on parent form typing actions
     const columns = useMemo(() => [
         {
             id: "agent",
@@ -43,8 +42,12 @@ const Page = () => {
                 const userObj = row.original.user
                 return (
                     <div className="flex flex-col">
-                        <span className="font-medium">{userObj?.name || "Inconnu"}</span>
-                        <span className="text-xs text-muted-foreground">{userObj?.email || "-"}</span>
+                        <span className="font-medium text-stone-900 dark:text-stone-100">
+                            {userObj?.name || "Inconnu"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                            {userObj?.email || "-"}
+                        </span>
                     </div>
                 )
             }
@@ -53,14 +56,22 @@ const Page = () => {
             id: "profil_name",
             header: "Profil Technique",
             cell: ({ row }) => {
-                return <span className="font-medium">{row.original.profil?.name || "-"}</span>
+                return (
+                    <span className="font-medium text-stone-800 dark:text-stone-200">
+                        {row.original.profil?.name || "-"}
+                    </span>
+                )
             }
         },
         {
             id: "profil_duration",
             header: "Durée du Profil",
             cell: ({ row }) => {
-                return <span>{row.original.profil?.duration || "-"}</span>
+                return (
+                    <span className="text-stone-700 dark:text-stone-300">
+                        {row.original.profil?.duration || "-"}
+                    </span>
+                )
             }
         },
         {
@@ -74,10 +85,10 @@ const Page = () => {
                 if (amount === undefined || amount === null) return "-"
 
                 return (
-                    <span className="whitespace-nowrap">
+                    <span className="whitespace-nowrap font-semibold text-stone-900 dark:text-stone-100">
                         {Number(amount).toLocaleString('fr-FR')}{" "}
                         {currencyStr && (
-                            <span className="text-muted-foreground text-xs ml-0.5">{currencyStr}</span>
+                            <span className="text-muted-foreground text-xs ml-0.5 font-normal">{currencyStr}</span>
                         )}
                     </span>
                 )
@@ -90,7 +101,11 @@ const Page = () => {
             cell: ({ getValue }) => {
                 const qty = getValue()
                 return (
-                    <span className={`font-bold ${qty <= 5 ? "text-red-600" : "text-emerald-600"}`}>
+                    <span className={`font-bold transition-colors ${
+                        qty <= 5 
+                            ? "text-red-600 dark:text-red-400" 
+                            : "text-emerald-600 dark:text-emerald-400"
+                    }`}>
                         {qty} {qty > 1 ? "tickets" : "ticket"}
                     </span>
                 )
@@ -103,7 +118,11 @@ const Page = () => {
             cell: ({ getValue }) => {
                 const rawDate = getValue()
                 if (!rawDate) return "-"
-                return format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })
+                return (
+                    <span className="text-stone-600 dark:text-stone-400 text-sm">
+                        {format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })}
+                    </span>
+                )
             },
         },
         {
@@ -111,13 +130,10 @@ const Page = () => {
             header: "Actions",
             cell: ({ row }) => {
                 const rowData = row.original
-
-                // Check authorization role state rules safely
-                // const canSell = user && !user.role_id > 1 && (user.role === 'agent' || user.role === 'superagent')
                 const canSell = user?.role_id > 1
 
                 if (!canSell) {
-                    return <span className="text-xs text-muted-foreground/50">—</span>
+                    return <span className="text-xs text-muted-foreground/40">—</span>
                 }
 
                 return (
@@ -130,23 +146,27 @@ const Page = () => {
                 )
             },
         },
-    ], [user]) // Re-run calculations ONLY if the authenticated identity context shifts
+    ], [user])
 
     return (
-        <div>
+        <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
-                <h2>Gestion du stock des agents</h2>
+                <h2 className="text-xl tracking-tight text-stone-900 dark:text-stone-50">
+                    Gestion du stock des agents
+                </h2>
                 <div className="flex flex-row">
-                    {user.role_id < 2 && <CreateStock onStockAssigned={getStockData} />}
+                    {user?.role_id < 2 && <CreateStock onStockAssigned={getStockData} />}
                 </div>
             </div>
 
             {isLoading ? (
-                <div className="text-sm text-muted-foreground animate-pulse">
+                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
                     Chargement du stock en cours...
                 </div>
             ) : (
-                <DataTable columns={columns} data={stocks} />
+                <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+                    <DataTable columns={columns} data={stocks} />
+                </div>
             )}
         </div>
     )

@@ -18,7 +18,7 @@ import {
 } from "#components/ui/select"
 import { Modal } from "#components/ui/Modal"
 import api from "#lib/axios"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { format, parseISO } from "date-fns"
 import { fr } from "date-fns/locale"
 import Create from "./Create"
@@ -47,76 +47,9 @@ const Page = () => {
     // Setting page layout title
     useApp('Profiles')
 
-    const columns = [
-        {
-            accessorKey: "name",
-            header: "Nom",
-        },
-        {
-            accessorKey: "duration",
-            header: "Durée",
-        },
-        {
-            accessorKey: "price",
-            header: "Prix",
-            cell: ({ row }) => {
-                const amount = row.original.price;
-                const currencyCode = row.original.currency?.code || row.original.currency?.symbol || "";
-                if (amount === undefined || amount === null) return "-";
-                return `${Number(amount).toLocaleString('fr-FR')} ${currencyCode}`.trim();
-            }
-        },
-        {
-            accessorKey: "created_at",
-            header: "Date de création",
-            cell: ({ getValue }) => {
-                const rawDate = getValue();
-                if (!rawDate) return "-";
-                return format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr });
-            },
-        },
-        {
-            id: "actions",
-            header: "Actions",
-            cell: ({ row }) => (
-                <div className="flex gap-2">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                            setEditProfil(row.original)
-                            setEditFormData({
-                                name: row.original.name,
-                                duration: row.original.duration,
-                                price: String(row.original.price),
-                                currency_id: String(row.original.currency_id)
-                            })
-                            setEditErrors({})
-                            setIsEditOpen(true)
-                        }}
-                    >
-                        Éditer
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                            setDeleteProfil(row.original)
-                            setDeleteError("")
-                            setIsDeleteOpen(true)
-                        }}
-                    >
-                        Supprimer
-                    </Button>
-                </div>
-            ),
-        },
-    ]
-
     const getProfilsData = async () => {
         try {
             const res = await api.get('/profils')
-            // Fallback strategy depending on API wrapping schemas (data vs data.data)
             const resolvedData = Array.isArray(res.data) ? res.data : res.data.profils || [];
             setProfils(resolvedData)
             setIsLoading(false)
@@ -173,7 +106,6 @@ const Page = () => {
         setEditErrors({})
 
         try {
-            // Fits Laravel update parameters utilizing PATCH
             await api.patch(`/profils/${editProfil.id}`, editFormData)
             setIsEditOpen(false)
             getProfilsData()
@@ -205,14 +137,112 @@ const Page = () => {
         }
     }
 
+    // Encapsulated with useMemo to prevent table structural rebuilds on modal input changes
+    const columns = useMemo(() => [
+        {
+            accessorKey: "name",
+            header: "Nom",
+            cell: ({ getValue }) => (
+                <span className="font-medium text-stone-900 dark:text-stone-100">
+                    {getValue()}
+                </span>
+            )
+        },
+        {
+            accessorKey: "duration",
+            header: "Durée",
+            cell: ({ getValue }) => (
+                <span className="text-stone-700 dark:text-stone-300">
+                    {getValue()}
+                </span>
+            )
+        },
+        {
+            accessorKey: "price",
+            header: "Prix",
+            cell: ({ row }) => {
+                const amount = row.original.price;
+                const currencyCode = row.original.currency?.code || row.original.currency?.symbol || "";
+                if (amount === undefined || amount === null) return "-";
+                return (
+                    <span className="whitespace-nowrap font-semibold text-stone-900 dark:text-stone-100">
+                        {Number(amount).toLocaleString('fr-FR')}{" "}
+                        {currencyCode && (
+                            <span className="text-muted-foreground text-xs ml-0.5 font-normal">{currencyCode}</span>
+                        )}
+                    </span>
+                );
+            }
+        },
+        {
+            accessorKey: "created_at",
+            header: "Date de création",
+            cell: ({ getValue }) => {
+                const rawDate = getValue();
+                if (!rawDate) return "-";
+                return (
+                    <span className="text-stone-600 dark:text-stone-400 text-sm">
+                        {format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })}
+                    </span>
+                );
+            },
+        },
+        {
+            id: "actions",
+            header: "Actions",
+            cell: ({ row }) => (
+                <div className="flex gap-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                            setEditProfil(row.original)
+                            setEditFormData({
+                                name: row.original.name,
+                                duration: row.original.duration,
+                                price: String(row.original.price),
+                                currency_id: String(row.original.currency_id)
+                            })
+                            setEditErrors({})
+                            setIsEditOpen(true)
+                        }}
+                    >
+                        Éditer
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                            setDeleteProfil(row.original)
+                            setDeleteError("")
+                            setIsDeleteOpen(true)
+                        }}
+                    >
+                        Supprimer
+                    </Button>
+                </div>
+            ),
+        },
+    ], [])
+
     return (
-        <div>
+        <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
-                <h2>Gestion des profils</h2>
+                <h2 className="text-xl tracking-tight text-stone-900 dark:text-stone-50">
+                    Gestion des profils
+                </h2>
                 <Create onProfilCreated={handleProfilCreated} />
             </div>
 
-            {isLoading ? 'Chargement en cours...' : <DataTable columns={columns} data={profils} />}
+            {isLoading ? (
+                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
+                    Chargement des profils en cours...
+                </div>
+            ) : (
+                <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+                    <DataTable columns={columns} data={profils} />
+                </div>
+            )}
 
             {/* Edit Profil Modal */}
             {editProfil && (
@@ -230,7 +260,7 @@ const Page = () => {
                     
                     <form onSubmit={handleEditSubmit} className="space-y-4 mt-4">
                         {editErrors.general && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm transition-colors">
                                 {editErrors.general}
                             </div>
                         )}
@@ -248,7 +278,7 @@ const Page = () => {
                                 disabled={editIsLoading}
                             />
                             {editErrors.name && (
-                                <p className="text-red-500 text-sm">{editErrors.name[0]}</p>
+                                <p className="text-destructive text-xs font-medium mt-1">{editErrors.name[0]}</p>
                             )}
                         </div>
 
@@ -265,7 +295,7 @@ const Page = () => {
                                 disabled={editIsLoading}
                             />
                             {editErrors.duration && (
-                                <p className="text-red-500 text-sm">{editErrors.duration[0]}</p>
+                                <p className="text-destructive text-xs font-medium mt-1">{editErrors.duration[0]}</p>
                             )}
                         </div>
 
@@ -284,7 +314,7 @@ const Page = () => {
                                     disabled={editIsLoading}
                                 />
                                 {editErrors.price && (
-                                    <p className="text-red-500 text-sm">{editErrors.price[0]}</p>
+                                    <p className="text-destructive text-xs font-medium mt-1">{editErrors.price[0]}</p>
                                 )}
                             </div>
 
@@ -307,7 +337,7 @@ const Page = () => {
                                     </SelectContent>
                                 </Select>
                                 {editErrors.currency_id && (
-                                    <p className="text-red-500 text-sm">{editErrors.currency_id[0]}</p>
+                                    <p className="text-destructive text-xs font-medium mt-1">{editErrors.currency_id[0]}</p>
                                 )}
                             </div>
                         </div>
@@ -334,12 +364,12 @@ const Page = () => {
                     <DialogHeader>
                         <DialogTitle>Supprimer le profil</DialogTitle>
                         <DialogDescription>
-                            Êtes-vous sûr de vouloir supprimer le profil &quot;{deleteProfil?.name}&quot;? Cette action ne peut pas être annulée.
+                            Êtes-vous sûr de vouloir supprimer le profil &quot;{deleteProfil?.name}&quot; ? Cette action ne peut pas être annulée.
                         </DialogDescription>
                     </DialogHeader>
                     
                     {deleteError && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-4">
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm mt-4 transition-colors">
                             {deleteError}
                         </div>
                     )}

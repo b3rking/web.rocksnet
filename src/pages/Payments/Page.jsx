@@ -60,10 +60,10 @@ const Page = () => {
                 if (amount === undefined || amount === null) return "-"
 
                 return (
-                    <span className="whitespace-nowrap font-semibold text-stone-900">
+                    <span className="whitespace-nowrap font-semibold text-stone-900 dark:text-stone-100">
                         {Number(amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}{" "}
                         {currencyStr && (
-                            <span className="text-muted-foreground text-xs ml-0.5">{currencyStr}</span>
+                            <span className="text-muted-foreground text-xs ml-0.5 font-normal">{currencyStr}</span>
                         )}
                     </span>
                 )
@@ -74,7 +74,7 @@ const Page = () => {
             accessorKey: "payment_method",
             header: "Méthode",
             cell: ({ getValue }) => (
-                <span className="capitalize text-stone-700 text-sm font-medium">
+                <span className="capitalize text-stone-700 dark:text-stone-300 text-sm font-medium">
                     {getValue()?.toLowerCase() || "-"}
                 </span>
             )
@@ -84,14 +84,14 @@ const Page = () => {
             accessorKey: "payment_type",
             header: "Type de Flux",
             cell: ({ getValue }) => (
-                <span className="capitalize text-stone-600 text-sm">
+                <span className="capitalize text-stone-600 dark:text-stone-400 text-sm">
                     {getValue()?.toLowerCase() || "-"}
                 </span>
             )
         },
         {
             id: "target_entity",
-            header: "Payez par",
+            header: "Payé par",
             cell: ({ row }) => {
                 const type = row.original.payment_type
                 const agent = row.original.agent
@@ -100,9 +100,8 @@ const Page = () => {
                 if (type === 'Subscription') {
                     return (
                         <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                                {/* Client #{invoice?.client_id || row.original.client_id || "-"} */}
-                                { invoice?.client?.name || "-"}
+                            <span className="text-sm font-medium text-stone-900 dark:text-stone-200">
+                                {invoice?.client?.name || "-"}
                             </span>
                             {invoice?.period && (
                                 <span className="text-xs text-muted-foreground italic">
@@ -114,7 +113,11 @@ const Page = () => {
                 }
 
                 if (type === 'Ticket') {
-                    return <span className="text-sm text-stone-600">{agent?.name || "Agent non spécifié"}</span>
+                    return (
+                        <span className="text-sm text-stone-600 dark:text-stone-300">
+                            {agent?.name || "Agent non spécifié"}
+                        </span>
+                    )
                 }
 
                 return <span className="text-xs text-muted-foreground">—</span>
@@ -125,7 +128,11 @@ const Page = () => {
             header: "Enregistré par",
             cell: ({ row }) => {
                 const operator = row.original.saved_by_user || row.original.saved_by
-                return <span className="text-sm">{operator?.name || "-"}</span>
+                return (
+                    <span className="text-sm text-stone-700 dark:text-stone-300">
+                        {operator?.name || "-"}
+                    </span>
+                )
             }
         },
         {
@@ -135,7 +142,11 @@ const Page = () => {
             cell: ({ getValue }) => {
                 const rawDate = getValue()
                 if (!rawDate) return "-"
-                return format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })
+                return (
+                    <span className="text-stone-600 dark:text-stone-400 text-sm">
+                        {format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })}
+                    </span>
+                )
             },
         },
         {
@@ -148,7 +159,7 @@ const Page = () => {
                 const canDelete = userRole === 'admin'
 
                 if (!canUpdate && !canDelete) {
-                    return <span className="text-xs text-muted-foreground/50">—</span>
+                    return <span className="text-xs text-muted-foreground/40">—</span>
                 }
 
                 return (
@@ -176,20 +187,24 @@ const Page = () => {
     ], [userRole]) 
 
     return (
-        <div>
+        <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
-                <h2>Gestion des Paiements Comptables</h2>
+                <h2 className="text-xl tracking-tight text-stone-900 dark:text-stone-50">
+                    Gestion des Paiements Comptables
+                </h2>
                 <div className="flex flex-row">
                     <Create onPaymentCreated={getPaymentData} />
                 </div>
             </div>
 
             {isLoading ? (
-                <div className="text-sm text-muted-foreground animate-pulse">
+                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
                     Chargement du registre des paiements en cours...
                 </div>
             ) : (
-                <DataTable columns={columns} data={payments} />
+                <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+                    <DataTable columns={columns} data={payments} />
+                </div>
             )}
         </div>
     )

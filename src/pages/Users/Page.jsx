@@ -1,3 +1,5 @@
+"use client"
+
 import { DataTable } from "#components/ui/DataTable"
 import { Button } from "#components/ui/button"
 import { Input } from "#components/ui/input"
@@ -16,9 +18,9 @@ import {
 } from "#components/ui/select"
 import { Modal } from "#components/ui/Modal"
 import api from "#lib/axios"
-import { useEffect, useState } from "react"
-import { format, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useEffect, useState, useMemo } from "react"
+import { format, parseISO } from "date-fns"
+import { fr } from "date-fns/locale"
 import Create from "./Create"
 import { useApp } from "#hooks/useApp"
 
@@ -35,88 +37,9 @@ const Page = () => {
     const [editIsLoading, setEditIsLoading] = useState(false)
     const [deleteIsLoading, setDeleteIsLoading] = useState(false)
     const [deleteError, setDeleteError] = useState("")
-    // setting the page title
+    
+    // Setting the page title
     useApp('Utilisateurs')
-
-    const columns = [
-        {
-            accessorKey: "name",
-            header: "Nom",
-        },
-        {
-            accessorKey: "email",
-            header: "Email",
-        },
-        {
-            accessorKey: "created_at",
-            header: "Date de creation",
-            cell: ({ getValue }) => {
-                const rawDate = getValue();
-                if (!rawDate) return "-";
-                
-                return format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr });
-            },
-        },
-        {
-            accessorKey: "role.name",
-            header: "Role",
-            cell: ({ getValue }) => {
-                const role = getValue()?.toLowerCase();
-                if (!role) return "-";
-                
-                // Define colors for each role
-                const badgeStyles = {
-                    admin: "bg-red-100 text-red-800 border-red-200",
-                    "super agent": "bg-purple-100 text-purple-800 border-purple-200",
-                    agent: "bg-blue-100 text-blue-800 border-blue-200",
-                };
-
-                // Fallback to gray if it doesn't match
-                const currentStyle = badgeStyles[role] || "bg-gray-100 text-gray-800 border-gray-200";
-
-                return (
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${currentStyle}`}>
-                        {getValue()}
-                    </span>
-                );
-            },
-        },
-        {
-            id: "actions",
-            header: "Actions",
-            cell: ({ row }) => (
-                <div className="flex gap-2">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                            setEditUser(row.original)
-                            setEditFormData({
-                                name: row.original.name,
-                                email: row.original.email,
-                                role_id: String(row.original.role_id)
-                            })
-                            setEditErrors({})
-                            setIsEditOpen(true)
-                        }}
-                    >
-                        Éditer
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                            setDeleteUser(row.original)
-                            setDeleteError("")
-                            setIsDeleteOpen(true)
-                        }}
-                    >
-                        Supprimer
-                    </Button>
-                </div>
-            ),
-        },
-    ]
 
     const getData = async () => {
         try {
@@ -125,7 +48,7 @@ const Page = () => {
             setIsLoading(false)
         } catch (err) {
             setIsLoading(false)
-            console.log(err);
+            console.error(err);
         }
     }
 
@@ -135,7 +58,7 @@ const Page = () => {
             const rolesData = Array.isArray(res.data.roles) ? res.data.roles : []
             setRoles(rolesData)
         } catch (err) {
-            console.log('Error fetching roles:', err)
+            console.error('Error fetching roles:', err)
             setRoles([])
         }
     }
@@ -145,7 +68,7 @@ const Page = () => {
         fetchRoles()
     }, [])
 
-    const handleUserCreated = (newUser) => {
+    const handleUserCreated = () => {
         getData()
     }
 
@@ -213,13 +136,118 @@ const Page = () => {
         }
     }
 
+    // Stabilized columns config with useMemo to prevent rows re-evaluation during modal form updates
+    const columns = useMemo(() => [
+        {
+            accessorKey: "name",
+            header: "Nom",
+            cell: ({ getValue }) => (
+                <span className="font-medium text-stone-900 dark:text-stone-100">
+                    {getValue()}
+                </span>
+            )
+        },
+        {
+            accessorKey: "email",
+            header: "Email",
+            cell: ({ getValue }) => (
+                <span className="text-stone-600 dark:text-stone-400">
+                    {getValue()}
+                </span>
+            )
+        },
+        {
+            accessorKey: "created_at",
+            header: "Date de création",
+            cell: ({ getValue }) => {
+                const rawDate = getValue();
+                if (!rawDate) return "-";
+                return (
+                    <span className="text-stone-500 dark:text-stone-400 text-sm">
+                        {format(parseISO(rawDate), "dd/MM/yyyy HH:mm", { locale: fr })}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: "role.name",
+            header: "Rôle",
+            cell: ({ getValue }) => {
+                const roleName = getValue();
+                const roleKey = roleName?.toLowerCase();
+                if (!roleKey) return "-";
+                
+                // Dark-mode adaptive configurations for standard semantic system badges
+                const badgeStyles = {
+                    admin: "bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50",
+                    "super agent": "bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/50",
+                    agent: "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/50",
+                };
+
+                const currentStyle = badgeStyles[roleKey] || "bg-stone-50 text-stone-800 border-stone-200 dark:bg-stone-900 dark:text-stone-400 dark:border-stone-800";
+
+                return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize tracking-wide transition-colors ${currentStyle}`}>
+                        {roleName}
+                    </span>
+                );
+            },
+        },
+        {
+            id: "actions",
+            header: "Actions",
+            cell: ({ row }) => (
+                <div className="flex gap-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                            setEditUser(row.original)
+                            setEditFormData({
+                                name: row.original.name,
+                                email: row.original.email,
+                                role_id: String(row.original.role_id)
+                            })
+                            setEditErrors({})
+                            setIsEditOpen(true)
+                        }}
+                    >
+                        Éditer
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                            setDeleteUser(row.original)
+                            setDeleteError("")
+                            setIsDeleteOpen(true)
+                        }}
+                    >
+                        Supprimer
+                    </Button>
+                </div>
+            ),
+        },
+    ], [])
+
     return (
-        <div>
+        <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
-                <h2>Gestion des utilisateurs</h2>
+                <h2 className="text-xl tracking-tight text-stone-900 dark:text-stone-50">
+                    Gestion des utilisateurs
+                </h2>
                 <Create onUserCreated={handleUserCreated} />
             </div>
-            {isLoading ? 'loading...' : <DataTable columns={columns} data={users} />}
+
+            {isLoading ? (
+                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
+                    Chargement des utilisateurs en cours...
+                </div>
+            ) : (
+                <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
+                    <DataTable columns={columns} data={users} />
+                </div>
+            )}
 
             {/* Edit Modal */}
             {editUser && (
@@ -234,9 +262,9 @@ const Page = () => {
                             Mettez à jour les informations de l'utilisateur
                         </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleEditSubmit} className="space-y-4">
+                    <form onSubmit={handleEditSubmit} className="space-y-4 mt-4">
                         {editErrors.general && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm transition-colors">
                                 {editErrors.general}
                             </div>
                         )}
@@ -254,7 +282,7 @@ const Page = () => {
                                 disabled={editIsLoading}
                             />
                             {editErrors.name && (
-                                <p className="text-red-500 text-sm">{editErrors.name[0]}</p>
+                                <p className="text-destructive text-xs font-medium mt-1">{editErrors.name[0]}</p>
                             )}
                         </div>
 
@@ -271,18 +299,18 @@ const Page = () => {
                                 disabled={editIsLoading}
                             />
                             {editErrors.email && (
-                                <p className="text-red-500 text-sm">{editErrors.email[0]}</p>
+                                <p className="text-destructive text-xs font-medium mt-1">{editErrors.email[0]}</p>
                             )}
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="edit-role">Rôle</Label>
-                            <Select value={editFormData.role_id} onValueChange={handleEditRoleChange}>
+                            <Select value={editFormData.role_id} onValueChange={handleEditRoleChange} modal={true}>
                                 <SelectTrigger id="edit-role" disabled={editIsLoading}>
                                     <SelectValue placeholder="Sélectionnez un rôle" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {Array.isArray(roles) && roles.map(role => (
+                                    {roles.map(role => (
                                         <SelectItem key={role.id} value={String(role.id)}>
                                             {role.name}
                                         </SelectItem>
@@ -290,12 +318,12 @@ const Page = () => {
                                 </SelectContent>
                             </Select>
                             {editErrors.role_id && (
-                                <p className="text-red-500 text-sm">{editErrors.role_id[0]}</p>
+                                <p className="text-destructive text-xs font-medium mt-1">{editErrors.role_id[0]}</p>
                             )}
                         </div>
 
                         <div className="flex gap-4 justify-end mt-6">
-                            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={editIsLoading}>
+                            <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} disabled={editIsLoading}>
                                 Annuler
                             </Button>
                             <Button type="submit" disabled={editIsLoading}>
@@ -316,14 +344,16 @@ const Page = () => {
                     <DialogHeader>
                         <DialogTitle>Supprimer l'utilisateur</DialogTitle>
                         <DialogDescription>
-                            Êtes-vous sûr de vouloir supprimer {deleteUser?.name}? Cette action ne peut pas être annulée.
+                            Êtes-vous sûr de vouloir supprimer {deleteUser?.name} ? Cette action ne peut pas être annulée.
                         </DialogDescription>
                     </DialogHeader>
+                    
                     {deleteError && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/30 text-red-700 dark:text-red-400 px-4 py-3 rounded text-sm mt-4 transition-colors">
                             {deleteError}
                         </div>
                     )}
+                    
                     <div className="flex gap-4 justify-end mt-6">
                         <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={deleteIsLoading}>
                             Annuler

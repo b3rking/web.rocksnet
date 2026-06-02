@@ -1,27 +1,21 @@
 import { AppSidebar } from "@/components/ui/AppSidebar"
-// import { ChartAreaInteractive } from "@/components/ui/ChartAreaInteractive"
-// import { DataTable } from "@/components/ui/DataTable"
-// import { SectionCards } from "@/components/ui/SectionCards"
 import { SiteHeader } from "@/components/ui/SiteHeader"
 import {
     SidebarInset,
     SidebarProvider,
 } from "@/components/ui/sidebar"
-
 import { Outlet } from "react-router"
 
 export default function AppLayout() {
     return (
         <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 72)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                }
-            }
+            style={{
+                "--sidebar-width": "calc(var(--spacing) * 72)",
+                "--header-height": "calc(var(--spacing) * 12)",
+            }}
         >
             <AppSidebar variant="inset" />
-            <SidebarInset>
+            <SidebarInset className="bg-background text-foreground transition-colors duration-200">
                 <SiteHeader />
                 <div className="flex flex-1 flex-col">
                     <div className="@container/main flex flex-1 flex-col gap-2">
