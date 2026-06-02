@@ -23,6 +23,7 @@ import { format, parseISO } from "date-fns"
 import { fr } from "date-fns/locale"
 import Create from "./Create"
 import { useApp } from "#hooks/useApp"
+import TableSkeleton from "#components/ui/TableSkeleton"
 
 const Page = () => {
     const [users, setUsers] = useState([])
@@ -248,9 +249,7 @@ const Page = () => {
             </div>
 
             {isLoading && users.length === 0 ? (
-                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
-                    Chargement des utilisateurs en cours...
-                </div>
+                <TableSkeleton />
             ) : (
                 <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
                     {/* On branche l'état contrôlé par le serveur ici */}
