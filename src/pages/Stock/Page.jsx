@@ -78,17 +78,24 @@ const Page = () => {
             id: "profil_price",
             header: "Prix unitaire",
             cell: ({ row }) => {
-                const amount = row.original.profil?.price
-                const currency = row.original.profil?.currency
-                const currencyStr = currency ? (currency.symbol || currency.code || currency.name) : ""
+                const profil = row.original.profil
+                const amount = profil?.price
+                
+                // Extracting currency format like the other modular platform components
+                const currencyObj = profil?.currency
+                const currencyStr = currencyObj 
+                    ? (currencyObj.symbol || currencyObj.code || currencyObj.name) 
+                    : ""
 
                 if (amount === undefined || amount === null) return "-"
 
                 return (
                     <span className="whitespace-nowrap font-semibold text-stone-900 dark:text-stone-100">
-                        {Number(amount).toLocaleString('fr-FR')}{" "}
+                        {Number(amount).toLocaleString('fr-FR')}
                         {currencyStr && (
-                            <span className="text-muted-foreground text-xs ml-0.5 font-normal">{currencyStr}</span>
+                            <span className="text-muted-foreground/90 text-xs ml-1 font-medium tracking-wide">
+                                &nbsp;{currencyStr}
+                            </span>
                         )}
                     </span>
                 )
