@@ -23,48 +23,64 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { Link } from "react-router"
+import { useAuth } from "#hooks/useAuth"
+import { ROLE_PERMISSIONS } from "#lib/roleConstants"
 
-const data = {
-    documents: [
-        {
-            name: "Utilisateurs",
-            url: "/users",
-            icon: IconUser,
-        },
-        {
-            name: "Profiles",
-            url: "/profils",
-            icon: IconTicket,
-        },
-        {
-            name: "Stock",
-            url: "/stocks",
-            icon: IconBuildingWarehouse,
-        },
-        {
-            name: "Historique",
-            url: "/history",
-            icon: IconCalendarTime,
-        },
-        {
-            name: "Abonnements",
-            url: "/subscriptions",
-            icon: IconArrowsTransferUpDown,
-        },
-        {
-            name: "Clients",
-            url: "/clients",
-            icon: IconUsersGroup,
-        },
-        {
-            name: "Paiements",
-            url: "/payments",
-            icon: IconMoneybagHeart,
-        }
-    ],
-}
+const allMenuItems = [
+    {
+        name: "Utilisateurs",
+        url: "/users",
+        icon: IconUser,
+        key: "users",
+    },
+    {
+        name: "Profiles",
+        url: "/profils",
+        icon: IconTicket,
+        key: "profils",
+    },
+    {
+        name: "Stock",
+        url: "/stocks",
+        icon: IconBuildingWarehouse,
+        key: "stocks",
+    },
+    {
+        name: "Historique",
+        url: "/history",
+        icon: IconCalendarTime,
+        key: "history",
+    },
+    {
+        name: "Abonnements",
+        url: "/subscriptions",
+        icon: IconArrowsTransferUpDown,
+        key: "subscriptions",
+    },
+    {
+        name: "Clients",
+        url: "/clients",
+        icon: IconUsersGroup,
+        key: "clients",
+    },
+    {
+        name: "Paiements",
+        url: "/payments",
+        icon: IconMoneybagHeart,
+        key: "payments",
+    }
+]
 
 export function AppSidebar(props) {
+    const user = useAuth()
+    const roleId = user?.role_id || 3 // Default to Agent if no role
+
+    // Filter menu items based on user role
+    const filteredMenuItems = allMenuItems.filter(item => {
+        const permissions = ROLE_PERMISSIONS[roleId] || []
+        return permissions.includes(item.key)
+    })
+
     return (
         <Sidebar collapsible="offcanvas" {...props}>
             <SidebarHeader>
@@ -83,10 +99,10 @@ export function AppSidebar(props) {
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                <NavLinks items={data.documents} />
+                <NavLinks items={filteredMenuItems} />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser user={user} />
             </SidebarFooter>
         </Sidebar>
     )

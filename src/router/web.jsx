@@ -1,6 +1,7 @@
 import { Error, AppLayout, Dashboard, User, Profil, Stock, History, Subscription, Client, Payment } from "@/pages";
 import { createBrowserRouter } from "react-router";
 import ProtectedRoute from "./ProtectedRoute";
+import RoleProtectedRoute from "./RoleProtectedRoute";
 import LoginRoute from "./LoginRoute";
 
 
@@ -12,41 +13,41 @@ const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                element: <Dashboard />
+                element: <RoleProtectedRoute pageKey="dashboard"><Dashboard /></RoleProtectedRoute>
             },
             {
                 path: '/users',
-                element: <User />,
+                element: <RoleProtectedRoute pageKey="users"><User /></RoleProtectedRoute>,
                 errorElement: <Error />
             },
             {
                 path: '/profils',
-                element: <Profil />,
+                element: <RoleProtectedRoute pageKey="profils"><Profil /></RoleProtectedRoute>,
                 errorElement: <Error />
             },
             {
                 path: '/stocks',
-                element: <Stock />,
+                element: <RoleProtectedRoute pageKey="stocks"><Stock /></RoleProtectedRoute>,
                 errorElement: <Error />
             },
             {
                 path: '/history',
-                element: <History />,
+                element: <RoleProtectedRoute pageKey="history"><History /></RoleProtectedRoute>,
                 errorElement: <Error />
             },
             {
                 path: '/subscriptions',
-                element: <Subscription />,
+                element: <RoleProtectedRoute pageKey="subscriptions"><Subscription /></RoleProtectedRoute>,
                 errorElement: <Error />
             },
             {
                 path: '/clients',
-                element: <Client />,
+                element: <RoleProtectedRoute pageKey="clients"><Client /></RoleProtectedRoute>,
                 errorElement: <Error />
             },
             {
                 path: '/payments',
-                element: <Payment />,
+                element: <RoleProtectedRoute pageKey="payments"><Payment /></RoleProtectedRoute>,
                 errorElement: <Error />
             }
         ]

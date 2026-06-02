@@ -20,6 +20,7 @@ import {
 } from "#components/ui/select"
 import api from "#lib/axios"
 import { useAuth } from "#hooks/useAuth"
+import { toast } from "sonner"
 
 const Edit = ({ payment, onPaymentUpdated }) => {
     const [isOpen, setIsOpen] = useState(false)
@@ -29,7 +30,7 @@ const Edit = ({ payment, onPaymentUpdated }) => {
     const [stockMovements, setStockMovements] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const user = useAuth()
     const activeUser = user?.user || user
     const isAdminUser = activeUser?.role_id === 1
@@ -58,7 +59,7 @@ const Edit = ({ payment, onPaymentUpdated }) => {
                 period: payment.period || (payment.invoice?.period || ''),
                 stock_history_id: payment.stock_history_id ? String(payment.stock_history_id) : ''
             })
-            
+
             // Baseline configuration loading matching Create context
             fetchBaseRelations()
 
@@ -146,16 +147,19 @@ const Edit = ({ payment, onPaymentUpdated }) => {
 
         try {
             const response = await api.put(`/payments/${payment.id}`, payload)
+            toast.success('Paiement mis à jour avec succès')
             setIsOpen(false)
             if (onPaymentUpdated) {
                 // Ensure proper dataset targeting format mapping your standard layout
                 onPaymentUpdated(response.data.data || response.data)
             }
         } catch (err) {
+            const errorMessage = err.response?.data?.message || "Une erreur est survenue lors de la mise à jour."
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else {
-                setErrors({ general: err.response?.data?.message || "Une erreur est survenue lors de la mise à jour." })
+                setErrors({ general: errorMessage })
             }
         } finally {
             setIsLoading(false)
@@ -178,7 +182,7 @@ const Edit = ({ payment, onPaymentUpdated }) => {
                     Ajustez les détails financiers du paiement de type <span className="font-semibold text-stone-900 dark:text-stone-100">{payment?.payment_type}</span>.
                 </DialogDescription>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 {errors.general && (
                     <div className="bg-red-50 text-red-700 p-3 rounded text-sm">
@@ -207,8 +211,8 @@ const Edit = ({ payment, onPaymentUpdated }) => {
 
                     <div className="space-y-2">
                         <Label htmlFor="edit-currency_id">Devise</Label>
-                        <Select 
-                            value={formData.currency_id} 
+                        <Select
+                            value={formData.currency_id}
                             onValueChange={(val) => handleSelectChange('currency_id', val)}
                         >
                             <SelectTrigger id="edit-currency_id" disabled={isLoading}>
@@ -305,8 +309,8 @@ const Edit = ({ payment, onPaymentUpdated }) => {
 
                         <div className="space-y-2 border-l-2 border-amber-500 pl-3 bg-slate-50/50 p-2 rounded">
                             <Label htmlFor="edit-stock_history_id">Mouvement de Vente Associé (Réductions)</Label>
-                            <Select 
-                                value={formData.stock_history_id} 
+                            <Select
+                                value={formData.stock_history_id}
                                 onValueChange={(val) => handleSelectChange('stock_history_id', val)}
                                 disabled={isLoading || (isAdminUser && !formData.agent_id)}
                             >
@@ -333,11 +337,11 @@ const Edit = ({ payment, onPaymentUpdated }) => {
                 {/* Description input converted to Textarea to match Create */}
                 <div className="space-y-2">
                     <Label htmlFor="edit-description">Description</Label>
-                    <Textarea 
-                        id="edit-description" 
-                        name="description" 
-                        value={formData.description} 
-                        onChange={handleChange} 
+                    <Textarea
+                        id="edit-description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
                         disabled={isLoading}
                     />
                     {errors.description && (

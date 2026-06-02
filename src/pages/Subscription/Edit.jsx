@@ -18,13 +18,14 @@ import {
     SelectValue,
 } from "#components/ui/select"
 import api from "#lib/axios"
+import { toast } from "sonner"
 
 const Edit = ({ subscription, onSubscriptionUpdated }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [currencies, setCurrencies] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const [formData, setFormData] = useState({
         bandwidth: '',
         price: '',
@@ -80,11 +81,14 @@ const Edit = ({ subscription, onSubscriptionUpdated }) => {
                 currency_id: Number(formData.currency_id)
             })
 
+            toast.success('Abonnement mis à jour avec succès')
             setIsOpen(false)
             if (onSubscriptionUpdated) {
                 onSubscriptionUpdated(response.data)
             }
         } catch (err) {
+            const errorMessage = err.response?.data?.message || "Une erreur est survenue lors de la mise à jour de l'abonnement"
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else if (err.response?.data?.message) {
@@ -113,7 +117,7 @@ const Edit = ({ subscription, onSubscriptionUpdated }) => {
                     Modifiez les configurations du forfait d'abonnement internet sélectionné.
                 </DialogDescription>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 {errors.general && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
@@ -157,8 +161,8 @@ const Edit = ({ subscription, onSubscriptionUpdated }) => {
 
                     <div className="space-y-2">
                         <Label htmlFor="edit-currency_id">Devise</Label>
-                        <Select 
-                            value={formData.currency_id} 
+                        <Select
+                            value={formData.currency_id}
                             onValueChange={handleCurrencyChange}
                             modal={true}
                         >

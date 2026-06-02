@@ -17,6 +17,7 @@ import {
 } from "#components/ui/select"
 // import { SelectPortal } from "@radix-ui/react-select"
 import api from "#lib/axios"
+import { toast } from "sonner"
 
 const Create = ({ onUserCreated }) => {
     const [isOpen, setIsOpen] = useState(false)
@@ -38,7 +39,7 @@ const Create = ({ onUserCreated }) => {
     const fetchRoles = async () => {
         try {
             const res = await api.get('/roles')
-            
+
             const rolesData = Array.isArray(res.data.roles) ? res.data.roles : []
             setRoles(rolesData)
             // Set agent as default if available
@@ -90,6 +91,7 @@ const Create = ({ onUserCreated }) => {
         try {
             const response = await api.post('/register', formData)
 
+            toast.success('Utilisateur créé avec succès')
             // Reset form
             setFormData({
                 name: '',
@@ -104,6 +106,8 @@ const Create = ({ onUserCreated }) => {
                 onUserCreated(response.data)
             }
         } catch (err) {
+            const errorMessage = err.response?.data?.message || 'Une erreur est survenue lors de la création de l\'utilisateur'
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else if (err.response?.data?.message) {
@@ -175,11 +179,11 @@ const Create = ({ onUserCreated }) => {
                         </SelectTrigger>
                         <SelectContent>
                             {/* <SelectPortal> */}
-                                {Array.isArray(roles) && roles.map(role => (
-                                    <SelectItem key={role.id} value={String(role.id)}>
-                                        {role.name}
-                                    </SelectItem>
-                                 ))}
+                            {Array.isArray(roles) && roles.map(role => (
+                                <SelectItem key={role.id} value={String(role.id)}>
+                                    {role.name}
+                                </SelectItem>
+                            ))}
                             {/* </SelectPortal> */}
                         </SelectContent>
                     </Select>

@@ -20,6 +20,7 @@ import {
 } from "#components/ui/select"
 import api from "#lib/axios"
 import { useAuth } from "#hooks/useAuth"
+import { toast } from "sonner"
 
 const Create = ({ onPaymentCreated }) => {
     const [isOpen, setIsOpen] = useState(false)
@@ -27,10 +28,10 @@ const Create = ({ onPaymentCreated }) => {
     const [agents, setAgents] = useState([])
     const [clients, setClients] = useState([])
     const [stockMovements, setStockMovements] = useState([])
-    
+
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const user = useAuth()
     const activeUser = user?.user || user; // Normalizes auth structure if nested
     const isAdminUser = activeUser?.role_id === 1; // Matches your exact admin role ID
@@ -43,7 +44,7 @@ const Create = ({ onPaymentCreated }) => {
         payment_method: '',
         description: '',
         client_id: '',
-        period: '', 
+        period: '',
         stock_history_id: ''
     })
 
@@ -89,8 +90,8 @@ const Create = ({ onPaymentCreated }) => {
             api.get('/clients')
                 .then(res => setClients(res.data.clients || res.data || []))
                 .catch(err => console.error(err))
-        } 
-        
+        }
+
         if (formData.payment_type === 'Ticket') {
             if (isAdminUser) {
                 api.get('/list/agents')
@@ -139,7 +140,7 @@ const Create = ({ onPaymentCreated }) => {
         const payload = {
             amount: Number(formData.amount).toFixed(2),
             currency_id: Number(formData.currency_id),
-            saved_by: activeUserId, 
+            saved_by: activeUserId,
             payment_type: formData.payment_type,
             payment_method: formData.payment_method,
             description: formData.description,
@@ -151,6 +152,7 @@ const Create = ({ onPaymentCreated }) => {
 
         try {
             const response = await api.post('/payments', payload)
+            toast.success('Paiement enregistré avec succès')
             setFormData({
                 amount: '', currency_id: formData.currency_id, agent_id: '',
                 payment_type: '', payment_method: '', description: '',
@@ -159,10 +161,12 @@ const Create = ({ onPaymentCreated }) => {
             setIsOpen(false)
             if (onPaymentCreated) onPaymentCreated(response.data)
         } catch (err) {
+            const errorMessage = err.response?.data?.message || "Une erreur est survenue."
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else {
-                setErrors({ general: err.response?.data?.message || "Une erreur est survenue." })
+                setErrors({ general: errorMessage })
             }
         } finally {
             // Correct implementation to unlock the form UI state
@@ -271,8 +275,8 @@ const Create = ({ onPaymentCreated }) => {
 
                         <div className="space-y-2 border-l-2 border-amber-500 pl-3 bg-slate-50/50 p-2 rounded">
                             <Label htmlFor="stock_history_id">Mouvement de Vente Associé (Réductions)</Label>
-                            <Select 
-                                value={formData.stock_history_id} 
+                            <Select
+                                value={formData.stock_history_id}
                                 onValueChange={(val) => handleSelectChange('stock_history_id', val)}
                                 disabled={isLoading || (isAdminUser && !formData.agent_id)}
                             >

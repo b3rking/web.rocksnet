@@ -18,13 +18,14 @@ import {
     SelectValue,
 } from "#components/ui/select"
 import api from "#lib/axios"
+import { toast } from "sonner"
 
 const Create = ({ onProfilCreated }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [currencies, setCurrencies] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const [formData, setFormData] = useState({
         name: '',
         duration: '',
@@ -37,7 +38,7 @@ const Create = ({ onProfilCreated }) => {
             const res = await api.get('/currencies')
             const currencyData = Array.isArray(res.data) ? res.data : res.data.currencies || res.data.data || []
             setCurrencies(currencyData)
-            
+
             // Optional: Automatically auto-select the first available currency if none is set
             if (currencyData.length > 0 && !formData.currency_id) {
                 setFormData(prev => ({
@@ -93,6 +94,7 @@ const Create = ({ onProfilCreated }) => {
         try {
             const response = await api.post('/profils', formData)
 
+            toast.success('Profil créé avec succès')
             // Reset form fields but preserve the chosen currency for consecutive entries
             setFormData({
                 name: '',
@@ -106,12 +108,14 @@ const Create = ({ onProfilCreated }) => {
                 onProfilCreated(response.data)
             }
         } catch (err) {
+            const errorMessage = err.response?.data?.message || "Une erreur est survenue lors de la création du profil"
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else if (err.response?.data?.message) {
                 setErrors({ general: err.response.data.message })
             } else {
-                setErrors({ general: 'Une erreur est survenue lors de la création du profil' })
+                setErrors({ general: "Une erreur est survenue lors de la création du profil" })
             }
         } finally {
             setIsLoading(false)
@@ -130,7 +134,7 @@ const Create = ({ onProfilCreated }) => {
                     Remplissez le formulaire ci-dessous pour configurer un nouveau forfait technique
                 </DialogDescription>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 {errors.general && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -196,8 +200,8 @@ const Create = ({ onProfilCreated }) => {
 
                     <div className="space-y-2">
                         <Label htmlFor="currency_id">Devise</Label>
-                        <Select 
-                            value={formData.currency_id} 
+                        <Select
+                            value={formData.currency_id}
                             onValueChange={handleCurrencyChange}
                             modal={true}
                         >

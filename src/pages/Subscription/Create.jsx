@@ -18,13 +18,14 @@ import {
     SelectValue,
 } from "#components/ui/select"
 import api from "#lib/axios"
+import { toast } from "sonner"
 
 const Create = ({ onSubscriptionCreated }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [currencies, setCurrencies] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const [formData, setFormData] = useState({
         bandwidth: '',
         price: '',
@@ -36,7 +37,7 @@ const Create = ({ onSubscriptionCreated }) => {
             const res = await api.get('/currencies')
             const currencyData = Array.isArray(res.data) ? res.data : res.data.currencies || res.data.data || []
             setCurrencies(currencyData)
-            
+
             // Automatically select the first available currency fallback if none has been specified yet
             if (currencyData.length > 0 && !formData.currency_id) {
                 setFormData(prev => ({
@@ -103,11 +104,14 @@ const Create = ({ onSubscriptionCreated }) => {
                 currency_id: formData.currency_id
             })
 
+            toast.success('Abonnement créé avec succès')
             setIsOpen(false)
             if (onSubscriptionCreated) {
                 onSubscriptionCreated(response.data)
             }
         } catch (err) {
+            const errorMessage = err.response?.data?.message || "Une erreur est survenue lors de la création de l'abonnement"
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else if (err.response?.data?.message) {
@@ -132,7 +136,7 @@ const Create = ({ onSubscriptionCreated }) => {
                     Remplissez le formulaire ci-dessous pour configurer un nouveau forfait d'abonnement internet.
                 </DialogDescription>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 {errors.general && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
@@ -180,8 +184,8 @@ const Create = ({ onSubscriptionCreated }) => {
 
                     <div className="space-y-2">
                         <Label htmlFor="currency_id">Devise</Label>
-                        <Select 
-                            value={formData.currency_id} 
+                        <Select
+                            value={formData.currency_id}
                             onValueChange={handleCurrencyChange}
                             modal={true}
                         >

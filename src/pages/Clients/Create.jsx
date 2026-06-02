@@ -18,13 +18,14 @@ import {
     SelectValue,
 } from "#components/ui/select"
 import api from "#lib/axios"
+import { toast } from "sonner"
 
 const Create = ({ onClientCreated }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [subscriptions, setSubscriptions] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const [formData, setFormData] = useState({
         name: '',
         email: '', // Added field state
@@ -39,7 +40,7 @@ const Create = ({ onClientCreated }) => {
             const res = await api.get('/subscriptions')
             const subscriptionData = res.data.subscriptions.data || []
             setSubscriptions(subscriptionData)
-            
+
             if (subscriptionData.length > 0 && !formData.subscription_id) {
                 setFormData(prev => ({
                     ...prev,
@@ -109,11 +110,14 @@ const Create = ({ onClientCreated }) => {
                 etat: 'actif'
             })
 
+            toast.success('Client créé avec succès')
             setIsOpen(false)
             if (onClientCreated) {
                 onClientCreated(response.data)
             }
         } catch (err) {
+            const errorMessage = err.response?.data?.message || "Une erreur est survenue lors de l'enregistrement du client"
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else if (err.response?.data?.message) {
@@ -138,7 +142,7 @@ const Create = ({ onClientCreated }) => {
                     Remplissez le formulaire ci-dessous pour enregistrer un nouveau client et lui assigner un forfait internet.
                 </DialogDescription>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 {errors.general && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
@@ -222,8 +226,8 @@ const Create = ({ onClientCreated }) => {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="subscription_id">Forfait Internet</Label>
-                        <Select 
-                            value={formData.subscription_id} 
+                        <Select
+                            value={formData.subscription_id}
                             onValueChange={(val) => handleSelectChange('subscription_id', val)}
                             modal={true}
                         >
@@ -248,8 +252,8 @@ const Create = ({ onClientCreated }) => {
 
                     <div className="space-y-2">
                         <Label htmlFor="etat">État du Compte</Label>
-                        <Select 
-                            value={formData.etat} 
+                        <Select
+                            value={formData.etat}
                             onValueChange={(val) => handleSelectChange('etat', val)}
                             modal={true}
                         >

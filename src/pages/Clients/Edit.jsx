@@ -18,13 +18,14 @@ import {
     SelectValue,
 } from "#components/ui/select"
 import api from "#lib/axios"
+import { toast } from "sonner"
 
 const Edit = ({ client, onClientUpdated }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [subscriptions, setSubscriptions] = useState([])
     const [errors, setErrors] = useState({})
     const [isLoading, setIsLoading] = useState(false)
-    
+
     const [formData, setFormData] = useState({
         name: '',
         email: '', // Added hydration state
@@ -101,11 +102,14 @@ const Edit = ({ client, onClientUpdated }) => {
                 etat: formData.etat
             })
 
+            toast.success('Client mis à jour avec succès')
             setIsOpen(false)
             if (onClientUpdated) {
                 onClientUpdated(response.data)
             }
         } catch (err) {
+            const errorMessage = err.response?.data?.message || "Une erreur est survenue lors de la mise à jour du client"
+            toast.error(errorMessage)
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors)
             } else if (err.response?.data?.message) {
@@ -134,7 +138,7 @@ const Edit = ({ client, onClientUpdated }) => {
                     Modifiez les informations personnelles ou changez le forfait internet assigné à ce client.
                 </DialogDescription>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 {errors.general && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
@@ -214,8 +218,8 @@ const Edit = ({ client, onClientUpdated }) => {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="edit-subscription_id">Forfait Internet</Label>
-                        <Select 
-                            value={formData.subscription_id} 
+                        <Select
+                            value={formData.subscription_id}
                             onValueChange={(val) => handleSelectChange('subscription_id', val)}
                             modal={true}
                         >
@@ -240,8 +244,8 @@ const Edit = ({ client, onClientUpdated }) => {
 
                     <div className="space-y-2">
                         <Label htmlFor="edit-etat">État du Compte</Label>
-                        <Select 
-                            value={formData.etat} 
+                        <Select
+                            value={formData.etat}
                             onValueChange={(val) => handleSelectChange('etat', val)}
                             modal={true}
                         >
