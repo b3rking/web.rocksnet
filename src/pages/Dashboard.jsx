@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useApp } from "#hooks/useApp"
 import api from "#lib/axios"
+import { Link } from 'react-router'
 
 // Components & UI Elements
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "#components/ui/card"
@@ -13,65 +14,45 @@ import {
     IconUsers, 
     IconTicket, 
     IconReceipt2, 
-    IconCreditCard, 
-    IconTrendingUp,
     IconArrowUpRight,
     IconCoins,
     IconPlus
 } from "@tabler/icons-react"
 
-// Charts (Using your native recharts dep)
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid } from "recharts"
+// Charts
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts"
 
 const Dashboard = () => {
     useApp('Tableau de bord')
 
     const [stats, setStats] = useState({
         totalClients: 0,
-        activeSubscriptions: 0,
+        activeClients: 0,
+        totalSales: 0,
         availableStock: 0,
-        recentRevenueCDF: 0,
-        recentPayments: [],
-        chartData: []
+        chartData: [],
+        recentPayments: []
     })
     const [isLoading, setIsLoading] = useState(true)
 
-    // Parallel processing across explicit backend points
     const fetchDashboardStats = async () => {
         try {
             setIsLoading(true)
-            const [clientsRes, paymentsRes, stockRes, subsRes] = await Promise.all([
-                api.get('/clients').catch(() => ({ data: [] })),
-                api.get('/payments').catch(() => ({ data: [] })),
-                api.get('/stock').catch(() => ({ data: { total: 0 } })),
-                api.get('/subscriptions').catch(() => ({ data: [] }))
-            ])
-
-            // Safely resolve nested Eloquent layouts or resource wrappers
-            const clientCount = clientsRes.data?.data?.length || clientsRes.data?.length || 0
-            const rawPayments = paymentsRes.data?.data || paymentsRes.data || []
-            const activeSubs = subsRes.data?.data?.length || subsRes.data?.length || 0
+            const res = await api.get('/dashboard')
             
-            // Format data variables for graphs
-            const mockChartData = [
-                { name: "Jan", sales: 4000, revenue: 2400 },
-                { name: "Fév", sales: 3000, revenue: 1398 },
-                { name: "Mar", sales: 2000, revenue: 9800 },
-                { name: "Avr", sales: 2780, revenue: 3908 },
-                { name: "Mai", sales: 1890, revenue: 4800 },
-                { name: "Juin", sales: 2390, revenue: 3800 },
-            ]
+            // Extraction sécurisée des données de l'API
+            const payload = res.data?.data || res.data || {}
 
             setStats({
-                totalClients: clientCount,
-                activeSubscriptions: activeSubs,
-                availableStock: stockRes.data?.total || 0,
-                recentRevenueCDF: rawPayments.reduce((acc, curr) => acc + Number(curr.amount || 0), 0),
-                recentPayments: rawPayments.slice(0, 5),
-                chartData: mockChartData
+                totalClients: payload.total_client || 0,
+                activeClients: payload.total_client_actif || 0,
+                totalSales: payload.total_sales || 0,
+                availableStock: payload.stock || 0,
+                chartData: payload.performance || [],
+                recentPayments: payload.recent_payment || []
             })
         } catch (error) {
-            console.error("Dashboard calculation error:", error)
+            console.error("Dashboard data fetching error:", error)
         } finally {
             setIsLoading(false)
         }
@@ -89,12 +70,16 @@ const Dashboard = () => {
                     <h3 className="text-sm text-muted-foreground">Bienvenue dans votre espace de gestion comptable et logistique.</h3>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <Link to='/stocks'>
                     <Button size="sm" className="h-9 gap-1">
                         <IconPlus className="h-4 w-4" /> Attribution Ticket
                     </Button>
+                    </Link>
+                    <Link to='/payments'>
                     <Button size="sm" variant="outline" className="h-9 gap-1">
                         <IconReceipt2 className="h-4 w-4" /> Nouvelle Vente
                     </Button>
+                    </Link>
                 </div>
             </div>
 
@@ -111,22 +96,9 @@ const Dashboard = () => {
                         <div className="text-2xl font-bold tracking-tight">
                             {isLoading ? "..." : stats.totalClients}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Enregistrés sur la plateforme</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border border-border bg-card">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Abonnements Actifs</CardTitle>
-                        <div className="rounded-md bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
-                            <IconCreditCard className="h-4 w-4" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold tracking-tight">
-                            {isLoading ? "..." : stats.activeSubscriptions}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Flux récurrents valides</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {stats.activeClients} actifs actuellement
+                        </p>
                     </CardContent>
                 </Card>
 
@@ -139,9 +111,9 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold tracking-tight">
-                            {isLoading ? "..." : `${stats.recentRevenueCDF.toLocaleString('fr-FR')} FC`}
+                            {isLoading ? "..." : stats.totalSales}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Cumulé sur la période courante</p>
+                        <p className="text-xs text-muted-foreground mt-1">Transactions validées</p>
                     </CardContent>
                 </Card>
 
@@ -156,7 +128,20 @@ const Dashboard = () => {
                         <div className="text-2xl font-bold tracking-tight">
                             {isLoading ? "..." : stats.availableStock}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Tickets disponibles pour attribution</p>
+                        <p className="text-xs text-muted-foreground mt-1">Tickets disponibles au total</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border border-border bg-card opacity-50 cursor-not-allowed">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Flux d'Activité</CardTitle>
+                        <div className="rounded-md bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
+                            <IconArrowUpRight className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold tracking-tight">100%</div>
+                        <p className="text-xs text-muted-foreground mt-1">Système opérationnel</p>
                     </CardContent>
                 </Card>
             </div>
@@ -166,14 +151,9 @@ const Dashboard = () => {
                 {/* Visual Area Graphs */}
                 <Card className="lg:col-span-4 border border-border bg-card">
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <CardTitle className="text-base font-semibold">Analyse de Performance</CardTitle>
-                                <CardDescription>Suivi combiné des encaissements abonnements et tickets</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                <IconTrendingUp className="h-4 w-4" /> +12.4%
-                            </div>
+                        <div className="space-y-1">
+                            <CardTitle className="text-base font-semibold">Analyse de Performance</CardTitle>
+                            <CardDescription>Suivi combiné des encaissements abonnements et tickets</CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent className="px-2 sm:p-6">
@@ -181,9 +161,13 @@ const Dashboard = () => {
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={stats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
-                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                        <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2}/>
                                             <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                                        </linearGradient>
+                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#34d399" stopOpacity={0.2}/>
+                                            <stop offset="95%" stopColor="#34d399" stopOpacity={0}/>
                                         </linearGradient>
                                     </defs>
                                     <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
@@ -196,7 +180,8 @@ const Dashboard = () => {
                                             borderRadius: "var(--radius-md)"
                                         }} 
                                     />
-                                    <Area type="monotone" dataKey="revenue" stroke="var(--primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" name="Revenus" />
+                                    <Area type="monotone" dataKey="sales" stroke="var(--primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" name="Ventes (Sales)" />
+                                    <Area type="monotone" dataKey="revenue" stroke="#34d399" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" name="Revenus (Revenue)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -207,7 +192,7 @@ const Dashboard = () => {
                 <Card className="lg:col-span-3 border border-border bg-card">
                     <CardHeader>
                         <CardTitle className="text-base font-semibold">Flux Comptables Récents</CardTitle>
-                        <CardDescription>Les 5 dernières transactions financières enregistrées</CardDescription>
+                        <CardDescription>Les dernières transactions financières enregistrées</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
@@ -224,7 +209,7 @@ const Dashboard = () => {
                                     <div key={payment.id} className="flex items-center justify-between border-b border-border/40 pb-3 last:border-0 last:pb-0">
                                         <div className="space-y-1">
                                             <p className="text-sm font-medium leading-none max-w-[180px] truncate">
-                                                {payment.description || `Paiement #${payment.id.substring(0,8)}`}
+                                                {payment.description || `Paiement #${payment.id.substring(0, 8)}`}
                                             </p>
                                             <p className="text-xs text-muted-foreground capitalize">
                                                 {payment.payment_method?.toLowerCase()} — {payment.payment_type}
@@ -232,7 +217,10 @@ const Dashboard = () => {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-semibold whitespace-nowrap">
-                                                {Number(payment.amount).toLocaleString('fr-FR')} {payment.currency?.symbol || "FC"}
+                                                {Number(payment.amount).toLocaleString('fr-FR')}
+                                                <span className="text-xs text-muted-foreground font-normal ml-0.5">
+                                                    &nbsp;{payment.currency_id === 2 ? "$" : "FC"}
+                                                </span>
                                             </span>
                                             <IconArrowUpRight className="h-4 w-4 text-muted-foreground/60" />
                                         </div>
