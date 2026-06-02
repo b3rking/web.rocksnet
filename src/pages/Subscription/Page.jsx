@@ -1,6 +1,8 @@
 "use client"
 
 import { DataTable } from "#components/ui/DataTable"
+import { Input } from "#components/ui/input"
+import { Label } from "#components/ui/label"
 import api from "#lib/axios"
 import { useEffect, useState, useMemo } from "react"
 import { format, parseISO } from "date-fns"
@@ -10,23 +12,51 @@ import { useAuth } from "#hooks/useAuth"
 import Create from "./Create"
 import Edit from "./Edit" 
 import { Button } from "#components/ui/button"
+import TableSkeleton from "#components/ui/TableSkeleton"
 
 const Page = () => {
     const [subscriptions, setSubscriptions] = useState([])
     const [isLoading, setIsLoading] = useState(true)
 
-    // Setting page layout title
+    // --- ÉTATS POUR LA PAGINATION ---
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
+    const [pageCount, setPageCount] = useState(0)
+
+    // --- ÉTATS POUR LE TRI ET FILTRES ---
+    const [sorting, setSorting] = useState([{ id: 'created_at', desc: true }])
+    const [filters, setFilters] = useState({ search: '' })
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+
     useApp('Abonnements')
     const user = useAuth()
 
-    const getSubscriptionData = async () => {
-        try {
-            const res = await api.get('/subscriptions')
-            const resolvedData = Array.isArray(res.data)
-                ? res.data
-                : res.data.subscriptions?.data || res.data.subscriptions || res.data.data || []
+    // Debounce pour la recherche de bande passante / profil
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(filters.search)
+            setPagination(prev => ({ ...prev, pageIndex: 0 })) // Reset à la première page
+        }, 400)
+        return () => clearTimeout(timer)
+    }, [filters.search])
 
-            setSubscriptions(resolvedData)
+    const getSubscriptionData = async () => {
+        setIsLoading(true)
+        try {
+            const apiPage = pagination.pageIndex + 1
+            const currentSort = sorting[0] || { id: 'created_at', desc: true }
+
+            let url = `/subscriptions?page=${apiPage}&per_page=${pagination.pageSize}&sort_by=${currentSort.id}&sort_desc=${currentSort.desc}`
+
+            if (debouncedSearch) {
+                url += `&search=${encodeURIComponent(debouncedSearch)}`
+            }
+
+            const res = await api.get(url)
+            
+            // Résolution flexible du format de données paginées
+            const paginationKey = res.data.subscriptions || res.data
+            setSubscriptions(paginationKey.data || [])
+            setPageCount(paginationKey.last_page || 0)
             setIsLoading(false)
         } catch (err) {
             setIsLoading(false)
@@ -48,24 +78,25 @@ const Page = () => {
 
     useEffect(() => {
         getSubscriptionData()
-    }, [])
+    }, [pagination.pageIndex, pagination.pageSize, sorting, debouncedSearch])
 
     const columns = useMemo(() => [
         {
             id: "bandwidth",
             accessorKey: "bandwidth",
             header: "Bande passante / Profil",
-            cell: ({ getValue }) => {
-                return (
-                    <span className="font-medium text-stone-900 dark:text-stone-100">
-                        {getValue() || "-"}
-                    </span>
-                )
-            }
+            enableSorting: true,
+            cell: ({ getValue }) => (
+                <span className="font-medium text-stone-900 dark:text-stone-100">
+                    {getValue() || "-"}
+                </span>
+            )
         },
         {
             id: "price",
+            accessorKey: "price",
             header: "Tarif",
+            enableSorting: true,
             cell: ({ row }) => {
                 const amount = row.original.price
                 const currency = row.original.currency
@@ -89,6 +120,7 @@ const Page = () => {
             id: "created_at",
             accessorKey: "created_at",
             header: "Date de création",
+            enableSorting: true,
             cell: ({ getValue }) => {
                 const rawDate = getValue()
                 if (!rawDate) return "-"
@@ -102,6 +134,7 @@ const Page = () => {
         {
             id: "actions",
             header: "Actions",
+            enableSorting: false,
             cell: ({ row }) => {
                 const rowData = row.original
 
@@ -115,7 +148,6 @@ const Page = () => {
                             subscription={rowData}
                             onSubscriptionUpdated={getSubscriptionData}
                         />
-
                         <Button
                             size="sm"
                             variant="destructive"
@@ -129,6 +161,23 @@ const Page = () => {
         },
     ], [user]) 
 
+    // Barre d'outils pour la recherche
+    const filtersBar = useMemo(() => (
+        <div className="flex flex-col sm:flex-row items-end gap-4">
+            <div className="w-full sm:max-w-xs space-y-1.5">
+                <Label htmlFor="sub-search" className="text-xs font-medium text-stone-500">Rechercher</Label>
+                <Input
+                    id="sub-search"
+                    type="text"
+                    placeholder="Profil, vitesse, tarif..."
+                    value={filters.search}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="h-9"
+                />
+            </div>
+        </div>
+    ), [filters])
+
     return (
         <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
@@ -140,13 +189,22 @@ const Page = () => {
                 </div>
             </div>
 
-            {isLoading ? (
-                <div className="text-sm text-muted-foreground/70 animate-pulse py-4">
-                    Chargement des abonnements en cours...
-                </div>
+            {isLoading && subscriptions.length === 0 ? (
+                <TableSkeleton />
             ) : (
                 <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
-                    <DataTable columns={columns} data={subscriptions} />
+                    <DataTable 
+                        columns={columns} 
+                        data={subscriptions} 
+                        manualPagination={true}
+                        isLoading={isLoading}
+                        pageCount={pageCount}
+                        paginationState={pagination}
+                        onPaginationChange={setPagination}
+                        sortingState={sorting}
+                        onSortingChange={setSorting}
+                        filtersComponent={filtersBar}
+                    />
                 </div>
             )}
         </div>
