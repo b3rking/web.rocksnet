@@ -122,9 +122,6 @@ export function NavUser() {
                                     <span className="truncate text-xs text-stone-500 dark:text-stone-400">
                                         {user?.email}
                                     </span>
-                                    <span className="truncate text-xs font-medium capitalize text-stone-500 dark:text-stone-400">
-                                        {user?.role?.name || user?.role || "-"}
-                                    </span>
                                 </div>
                             </div>
                         </DropdownMenuLabel>

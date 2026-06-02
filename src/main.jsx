@@ -10,8 +10,8 @@ createRoot(document.getElementById('root')).render(
     <Provider store={store}>
         <StrictMode>
             <ThemeProvider defaultTheme="dark" storageKey="app-theme">
-            <App />
+                <App />
             </ThemeProvider>
-        </StrictMode>,
+        </StrictMode>
     </Provider>
 )
