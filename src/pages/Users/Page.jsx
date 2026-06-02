@@ -30,12 +30,23 @@ const Page = () => {
     const [roles, setRoles] = useState([])
     const [isLoading, setIsLoading] = useState(true)
     
-    // 1. Initialisation de l'état de la pagination
-    const [pagination, setPagination] = useState({
-        pageIndex: 0, // Page 1 pour TanStack
-        pageSize: 10,
-    })
-    const [pageCount, setPageCount] = useState(0) // Nombre total de pages renvoyé par Laravel
+    // Pagination state
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
+    const [pageCount, setPageCount] = useState(0)
+
+    // --- NOUVEAUX ÉTATS POUR LE TRI ET FILTRES ---
+    const [sorting, setSorting] = useState([{ id: 'created_at', desc: true }]) // Tri par défaut
+    const [filters, setFilters] = useState({ search: '', role_id: 'all' })
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+
+    // Debounce pour la recherche textuelle
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(filters.search)
+            setPagination(prev => ({ ...prev, pageIndex: 0 })) // Reset à la p.1 sur recherche
+        }, 400)
+        return () => clearTimeout(timer)
+    }, [filters.search])
 
     const [editUser, setEditUser] = useState(null)
     const [deleteUser, setDeleteUser] = useState(null)
@@ -49,22 +60,25 @@ const Page = () => {
     
     useApp('Utilisateurs')
 
-    // 2. On passe la pagination courante dans la requête API
+    // Intégration de tous les paramètres dans l'URL de l'API
     const getData = async () => {
-        setIsLoading(true) // On remet le loader lors du changement de page
+        setIsLoading(true)
         try {
-            const apiPage = pagination.pageIndex + 1; // Correction du décalage (0 -> 1)
-            const res = await api.get(`/list/users?page=${apiPage}&per_page=${pagination.pageSize}`)
+            const apiPage = pagination.pageIndex + 1
+            const currentSort = sorting[0] || { id: 'created_at', desc: true }
             
-            // Laravel met le tableau d'utilisateurs dans .data sous l'objet paginé
+            let url = `/list/users?page=${apiPage}&per_page=${pagination.pageSize}&sort_by=${currentSort.id}&sort_desc=${currentSort.desc}`
+            
+            if (debouncedSearch) url += `&search=${encodeURIComponent(debouncedSearch)}`
+            if (filters.role_id && filters.role_id !== 'all') url += `&role_id=${filters.role_id}`
+
+            const res = await api.get(url)
             setUsers(res.data.data)
-            // On extrait le nombre total de pages calculé par Laravel
             setPageCount(res.data.last_page)
-            
             setIsLoading(false)
         } catch (err) {
             setIsLoading(false)
-            console.error(err);
+            console.error(err)
         }
     }
 
@@ -79,18 +93,16 @@ const Page = () => {
         }
     }
 
-    // 3. On recharge les rôles une seule fois au montage
     useEffect(() => {
         fetchRoles()
     }, [])
 
-    // 4. On re-déclenche getData() à chaque fois que l'index de page ou la taille change
+    // Écoute des changements de pagination, de tri, et de filtres appliqués
     useEffect(() => {
         getData()
-    }, [pagination.pageIndex, pagination.pageSize])
+    }, [pagination.pageIndex, pagination.pageSize, sorting, debouncedSearch, filters.role_id])
 
     const handleUserCreated = () => {
-        // Optionnel : Revenir à la page 1 si nécessaire
         setPagination(prev => ({ ...prev, pageIndex: 0 }))
         getData()
     }
@@ -98,35 +110,26 @@ const Page = () => {
     const handleEditChange = (e) => {
         const { name, value } = e.target
         setEditFormData(prev => ({ ...prev, [name]: value }))
-        if (editErrors[name]) {
-            setEditErrors(prev => ({ ...prev, [name]: '' }))
-        }
+        if (editErrors[name]) setEditErrors(prev => ({ ...prev, [name]: '' }))
     }
 
     const handleEditRoleChange = (value) => {
         setEditFormData(prev => ({ ...prev, role_id: value }))
-        if (editErrors.role_id) {
-            setEditErrors(prev => ({ ...prev, role_id: '' }))
-        }
+        if (editErrors.role_id) setEditErrors(prev => ({ ...prev, role_id: '' }))
     }
 
     const handleEditSubmit = async (e) => {
         e.preventDefault()
         setEditIsLoading(true)
         setEditErrors({})
-
         try {
             await api.put(`/users/${editUser.id}`, editFormData)
             setIsEditOpen(false)
             getData()
         } catch (err) {
-            if (err.response?.data?.errors) {
-                setEditErrors(err.response.data.errors)
-            } else if (err.response?.data?.message) {
-                setEditErrors({ general: err.response.data.message })
-            } else {
-                setEditErrors({ general: 'Une erreur est survenue lors de la mise à jour' })
-            }
+            if (err.response?.data?.errors) setEditErrors(err.response.data.errors)
+            else if (err.response?.data?.message) setEditErrors({ general: err.response.data.message })
+            else setEditErrors({ general: 'Une erreur est survenue lors de la mise à jour' })
         } finally {
             setEditIsLoading(false)
         }
@@ -135,7 +138,6 @@ const Page = () => {
     const handleDelete = async () => {
         setDeleteIsLoading(true)
         setDeleteError("")
-
         try {
             await api.delete(`/users/${deleteUser.id}`)
             setIsDeleteOpen(false)
@@ -151,24 +153,23 @@ const Page = () => {
         {
             accessorKey: "name",
             header: "Nom",
+            enableSorting: true, // <-- Configurable
             cell: ({ getValue }) => (
-                <span className="font-medium text-stone-900 dark:text-stone-100">
-                    {getValue()}
-                </span>
+                <span className="font-medium text-stone-900 dark:text-stone-100">{getValue()}</span>
             )
         },
         {
             accessorKey: "email",
             header: "Email",
+            enableSorting: true, // <-- Configurable
             cell: ({ getValue }) => (
-                <span className="text-stone-600 dark:text-stone-400">
-                    {getValue()}
-                </span>
+                <span className="text-stone-600 dark:text-stone-400">{getValue()}</span>
             )
         },
         {
             accessorKey: "created_at",
             header: "Date de création",
+            enableSorting: true, // <-- Configurable
             cell: ({ getValue }) => {
                 const rawDate = getValue();
                 if (!rawDate) return "-";
@@ -181,7 +182,9 @@ const Page = () => {
         },
         {
             accessorKey: "role.name",
+            id: "role.name", // Identifiant explicite pour correspondre au tri backend
             header: "Rôle",
+            enableSorting: true, // <-- Configurable !
             cell: ({ getValue }) => {
                 const roleName = getValue();
                 const roleKey = roleName?.toLowerCase();
@@ -205,6 +208,7 @@ const Page = () => {
         {
             id: "actions",
             header: "Actions",
+            enableSorting: false, // Boutons d'actions non triables
             cell: ({ row }) => (
                 <div className="flex gap-2">
                     <Button
@@ -239,6 +243,43 @@ const Page = () => {
         },
     ], [])
 
+    // Injection de la barre de filtres (Configurable et personnalisable)
+    const filtersBar = useMemo(() => (
+        <div className="flex flex-col sm:flex-row items-end gap-4">
+            <div className="w-full sm:max-w-xs space-y-1.5">
+                <Label htmlFor="search-input" className="text-xs font-medium text-stone-500">Rechercher</Label>
+                <Input
+                    id="search-input"
+                    type="text"
+                    placeholder="Nom, email..."
+                    value={filters.search}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="h-9"
+                />
+            </div>
+            <div className="w-full sm:max-w-xs space-y-1.5">
+                <Label htmlFor="filter-role" className="text-xs font-medium text-stone-500">Filtrer par Rôle</Label>
+                <Select
+                    value={filters.role_id}
+                    onValueChange={(val) => {
+                        setFilters(prev => ({ ...prev, role_id: val }))
+                        setPagination(prev => ({ ...prev, pageIndex: 0 }))
+                    }}
+                >
+                    <SelectTrigger id="filter-role" className="h-9">
+                        <SelectValue placeholder="Tous les rôles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tous les rôles</SelectItem>
+                        {roles.map(role => (
+                            <SelectItem key={role.id} value={String(role.id)}>{role.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+    ), [filters, roles])
+
     return (
         <div className="text-foreground bg-background transition-colors duration-200">
             <div className="flex flex-row items-center justify-between font-bold mb-6">
@@ -252,7 +293,6 @@ const Page = () => {
                 <TableSkeleton />
             ) : (
                 <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm">
-                    {/* On branche l'état contrôlé par le serveur ici */}
                     <DataTable 
                         columns={columns} 
                         data={users} 
@@ -261,6 +301,10 @@ const Page = () => {
                         pageCount={pageCount}
                         paginationState={pagination}
                         onPaginationChange={setPagination}
+                        // Nouvelles fonctionnalités passées ici
+                        sortingState={sorting}
+                        onSortingChange={setSorting}
+                        filtersComponent={filtersBar}
                     />
                 </div>
             )}
