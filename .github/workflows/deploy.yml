@@ -26,7 +26,7 @@ jobs:
           envs: VITE_API_URL
           script: |
             # 1. Create the production env file right inside the directory dynamically
-            echo "VITE_API_BASE_URL=${{ secrets.VITE_API_URL }}" > /var/www/vhosts/rocksnet-ui/.env.production
+            echo "VITE_API_BASE_URL=${{ secrets.VITE_API_URL }}" > /var/www/vhosts/rocksnet-ui/.env
             
             # 2. Trigger your standard build script
             /var/www/vhosts/rocksnet-ui/deploy.sh
