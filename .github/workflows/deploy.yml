@@ -25,6 +25,3 @@ jobs:
           envs: VITE_API_BASE_URL
           script: |
             /var/www/vhosts/rocksnet-ui/deploy.sh "$VITE_API_BASE_URL"
-            
-            # 2. Trigger your standard build script
-            /var/www/vhosts/rocksnet-ui/deploy.sh
