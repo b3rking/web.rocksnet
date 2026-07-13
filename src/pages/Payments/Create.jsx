@@ -72,7 +72,7 @@ const Create = ({ onPaymentCreated }) => {
             }
 
             const res = await api.get(url)
-            setStockMovements(res.data.history || res.data || [])
+            setStockMovements(res.data.history || res.data?.data || res.data || [])
         } catch (err) {
             console.error('Error fetching stock movements:', err)
         }
