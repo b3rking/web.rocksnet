@@ -52,14 +52,16 @@ const Create = ({ onPaymentCreated }) => {
     const fetchBaseRelations = async () => {
         try {
             const currencyRes = await api.get('/currencies')
-            const currencyData = currencyRes.data.currencies || currencyRes.data || []
-            setCurrencies(currencyData)
+            const currencyData = currencyRes.data?.currencies ?? currencyRes.data?.data ?? currencyRes.data ?? []
+            const safeCurrencies = Array.isArray(currencyData) ? currencyData : []
+            setCurrencies(safeCurrencies)
 
-            if (currencyData.length > 0 && !formData.currency_id) {
-                setFormData(prev => ({ ...prev, currency_id: String(currencyData[0].id) }))
+            if (safeCurrencies.length > 0 && !formData.currency_id) {
+                setFormData(prev => ({ ...prev, currency_id: String(safeCurrencies[0].id) }))
             }
         } catch (err) {
             console.error('Error fetching baseline configurations:', err)
+            setCurrencies([])
         }
     }
 
@@ -88,15 +90,27 @@ const Create = ({ onPaymentCreated }) => {
     useEffect(() => {
         if (formData.payment_type === 'Subscription') {
             api.get('/clients')
-                .then(res => setClients(res.data.clients || res.data || []))
-                .catch(err => console.error(err))
+                .then(res => {
+                    const data = res.data?.clients ?? res.data?.data?.clients ?? res.data ?? []
+                    setClients(Array.isArray(data) ? data : [])
+                })
+                .catch(err => {
+                    console.error(err)
+                    setClients([])
+                })
         }
 
         if (formData.payment_type === 'Ticket') {
             if (isAdminUser) {
                 api.get('/list/agents')
-                    .then(res => setAgents(res.data.data || res.data || []))
-                    .catch(err => console.error(err))
+                    .then(res => {
+                        const data = res.data?.data ?? res.data ?? []
+                        setAgents(Array.isArray(data) ? data : [])
+                    })
+                    .catch(err => {
+                        console.error(err)
+                        setAgents([])
+                    })
             }
             fetchStockMovements(formData.agent_id)
         }
@@ -285,11 +299,13 @@ const Create = ({ onPaymentCreated }) => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {stockMovements.length === 0 ? (
-                                        <div className="p-2 text-xs text-muted-foreground text-center">Aucun mouvement trouvé.</div>
+                                        <SelectItem value="no-data" disabled>
+                                            Aucun mouvement trouvé.
+                                        </SelectItem>
                                     ) : (
                                         stockMovements.map(sm => (
                                             <SelectItem key={sm.id} value={String(sm.id)}>
-                                                {sm.profil?.name || 'Forfait'} | {sm.description || `Mouvement du ${new Date(sm.created_at).toLocaleDateString()}`} [-{sm.quantity || 0}]
+                                                {sm.profil?.name || 'Forfait'} | {sm.description || `Mouvement du ${new Date(sm.created_at).toLocaleDateString()}`} [-{sm.quantity || 0}] — {sm.profil?.price ?? 0} {currencies.find(c => c.id === sm.profil?.currency_id)?.symbol || ''}
                                             </SelectItem>
                                         ))
                                     )}
