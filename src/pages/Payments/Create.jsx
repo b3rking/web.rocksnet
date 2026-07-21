@@ -74,9 +74,11 @@ const Create = ({ onPaymentCreated }) => {
             }
 
             const res = await api.get(url)
-            setStockMovements(res.data.history || res.data?.data || res.data || [])
+            const data = res.data?.data ?? res.data?.history ?? res.data ?? []
+            setStockMovements(Array.isArray(data) ? data : [])
         } catch (err) {
             console.error('Error fetching stock movements:', err)
+            setStockMovements([])
         }
     }
 
@@ -91,8 +93,9 @@ const Create = ({ onPaymentCreated }) => {
         if (formData.payment_type === 'Subscription') {
             api.get('/clients')
                 .then(res => {
-                    const data = res.data?.clients ?? res.data?.data?.clients ?? res.data ?? []
-                    setClients(Array.isArray(data) ? data : [])
+                    // clients is an object with .data array (Laravel pagination)
+                    const clientList = res.data?.clients?.data ?? res.data?.clients ?? res.data?.data ?? res.data ?? []
+                    setClients(Array.isArray(clientList) ? clientList : [])
                 })
                 .catch(err => {
                     console.error(err)
