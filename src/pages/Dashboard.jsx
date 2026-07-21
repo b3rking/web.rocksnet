@@ -5,21 +5,20 @@ import { useApp } from "#hooks/useApp"
 import api from "#lib/axios"
 import { Link } from 'react-router'
 
-// Components & UI Elements
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "#components/ui/card"
 import { Button } from "#components/ui/button"
+import { Input } from "#components/ui/input"
 
-// Icons
 import { 
     IconUsers, 
     IconTicket, 
     IconReceipt2, 
     IconArrowUpRight,
     IconCoins,
-    IconPlus
+    IconPlus,
+    IconCalendar
 } from "@tabler/icons-react"
 
-// Charts
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts"
 
 const Dashboard = () => {
@@ -28,28 +27,48 @@ const Dashboard = () => {
     const [stats, setStats] = useState({
         totalClients: 0,
         activeClients: 0,
-        totalSales: 0,
+        totalSalesCount: 0,
+        totalSalesAmount: 0,
         availableStock: 0,
         chartData: [],
-        recentPayments: []
+        recentPayments: [],
+        topProfilSales: [],
+        topAgents: [],
+        period: { start_date: '', end_date: '' }
     })
+
     const [isLoading, setIsLoading] = useState(true)
+
+    // Date filters (default: last 30 days)
+    const today = new Date()
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(today.getDate() - 29)
+
+    const formatDate = (d) => d.toISOString().slice(0, 10)
+
+    const [startDate, setStartDate] = useState(formatDate(thirtyDaysAgo))
+    const [endDate, setEndDate] = useState(formatDate(today))
 
     const fetchDashboardStats = async () => {
         try {
             setIsLoading(true)
-            const res = await api.get('/dashboard')
+            const res = await api.get('/dashboard', {
+                params: { start_date: startDate, endDate }
+            })
             
-            // Extraction sécurisée des données de l'API
             const payload = res.data?.data || res.data || {}
 
             setStats({
-                totalClients: payload.total_client || 0,
-                activeClients: payload.total_client_actif || 0,
-                totalSales: payload.total_sales || 0,
-                availableStock: payload.stock || 0,
-                chartData: payload.performance || [],
-                recentPayments: payload.recent_payment || []
+                totalClients: payload.total_client ?? 0,
+                activeClients: payload.total_client_actif ?? 0,
+                totalSalesCount: payload.total_sales_count ?? 0,
+                totalSalesAmount: payload.total_sales_amount ?? 0,
+                availableStock: payload.stock ?? 0,
+                chartData: payload.performance ?? [],
+                recentPayments: payload.recent_payment ?? [],
+                topProfilSales: payload.top_profil_sales ?? [],
+                topAgents: payload.top_agents ?? [],
+                period: payload.period ?? { start_date: startDate, endDate }
             })
         } catch (error) {
             console.error("Dashboard data fetching error:", error)
@@ -60,25 +79,46 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchDashboardStats()
-    }, [])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startDate, endDate])
 
     return (
         <div className="space-y-6 p-1">
-            {/* Top Operational Quick Actions */}
+            {/* Header + Filters */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h3 className="text-sm text-muted-foreground">Bienvenue dans votre espace de gestion comptable et logistique.</h3>
+                    <h3 className="text-sm text-muted-foreground">
+                        Bienvenue dans votre espace de gestion comptable et logistique.
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2">
+                            <IconCalendar className="h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="h-9 w-auto"
+                            />
+                            <span className="text-muted-foreground">→</span>
+                            <Input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="h-9 w-auto"
+                            />
+                        </div>
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <Link to='/stocks'>
-                    <Button size="sm" className="h-9 gap-1">
-                        <IconPlus className="h-4 w-4" /> Attribution Ticket
-                    </Button>
+                        <Button size="sm" className="h-9 gap-1">
+                            <IconPlus className="h-4 w-4" /> Attribution Ticket
+                        </Button>
                     </Link>
                     <Link to='/payments'>
-                    <Button size="sm" variant="outline" className="h-9 gap-1">
-                        <IconReceipt2 className="h-4 w-4" /> Nouvelle Vente
-                    </Button>
+                        <Button size="sm" variant="outline" className="h-9 gap-1">
+                            <IconReceipt2 className="h-4 w-4" /> Nouvelle Vente
+                        </Button>
                     </Link>
                 </div>
             </div>
@@ -97,23 +137,25 @@ const Dashboard = () => {
                             {isLoading ? "..." : stats.totalClients}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            {stats.activeClients} actifs actuellement
+                            {stats.activeClients} actifs (période filtrée)
                         </p>
                     </CardContent>
                 </Card>
 
                 <Card className="border border-border bg-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Volume des Ventes</CardTitle>
+                        <CardTitle className="text-sm font-medium">Ventes (Période)</CardTitle>
                         <div className="rounded-md bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
                             <IconCoins className="h-4 w-4" />
                         </div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold tracking-tight">
-                            {isLoading ? "..." : stats.totalSales}
+                            {isLoading ? "..." : stats.totalSalesCount}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Transactions validées</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {isLoading ? "..." : stats.totalSalesAmount.toLocaleString('fr-FR')} FC/USD
+                        </p>
                     </CardContent>
                 </Card>
 
@@ -214,12 +256,17 @@ const Dashboard = () => {
                                             <p className="text-xs text-muted-foreground capitalize">
                                                 {payment.payment_method?.toLowerCase()} — {payment.payment_type}
                                             </p>
+                                            {payment.agent_name && (
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Agent: {payment.agent_name}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-semibold whitespace-nowrap">
-                                                {Number(payment.amount).toLocaleString('fr-FR')}
+                                                {payment.amount.toLocaleString('fr-FR')}
                                                 <span className="text-xs text-muted-foreground font-normal ml-0.5">
-                                                    &nbsp;{payment.currency_id === 2 ? "$" : "FC"}
+                                                    &nbsp;{payment.currency_symbol}
                                                 </span>
                                             </span>
                                             <IconArrowUpRight className="h-4 w-4 text-muted-foreground/60" />
@@ -228,6 +275,73 @@ const Dashboard = () => {
                                 ))
                             )}
                         </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Additional Reports: Top Profiles & Top Agents */}
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card className="border border-border bg-card">
+                    <CardHeader>
+                        <CardTitle className="text-base font-semibold">Top Profils (par revenus)</CardTitle>
+                        <CardDescription>Meilleurs profils vendus dans la période sélectionnée</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <div className="space-y-2 animate-pulse">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} className="h-10 bg-muted/50 rounded-md" />
+                                ))}
+                            </div>
+                        ) : stats.topProfilSales.length === 0 ? (
+                            <p className="text-sm text-muted-foreground py-6 text-center">Aucune donnée disponible.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {stats.topProfilSales.map((p) => (
+                                    <div key={p.profil_id} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0 last:pb-0">
+                                        <div>
+                                            <p className="text-sm font-medium">{p.profil_name}</p>
+                                            <p className="text-xs text-muted-foreground">{p.total_sales} ventes</p>
+                                        </div>
+                                        <div className="text-sm font-semibold">
+                                            {p.total_revenue.toLocaleString('fr-FR')} FC/USD
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="border border-border bg-card">
+                    <CardHeader>
+                        <CardTitle className="text-base font-semibold">Top Agents (par revenus)</CardTitle>
+                        <CardDescription>Agents les plus performants sur la période</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <div className="space-y-2 animate-pulse">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} className="h-10 bg-muted/50 rounded-md" />
+                                ))}
+                            </div>
+                        ) : stats.topAgents.length === 0 ? (
+                            <p className="text-sm text-muted-foreground py-6 text-center">Aucune donnée disponible.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {stats.topAgents.map((a) => (
+                                    <div key={a.agent_id} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0 last:pb-0">
+                                        <div>
+                                            <p className="text-sm font-medium">{a.agent_name}</p>
+                                            <p className="text-xs text-muted-foreground">{a.total_sales} ventes</p>
+                                        </div>
+                                        <div className="text-sm font-semibold">
+                                            {a.total_revenue.toLocaleString('fr-FR')} FC/USD
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
