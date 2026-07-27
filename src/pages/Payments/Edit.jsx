@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Modal } from "#components/ui/Modal"
 import { Button } from "#components/ui/button"
 import { Input } from "#components/ui/input"
@@ -22,6 +22,14 @@ import api from "#lib/axios"
 import { useAuth } from "#hooks/useAuth"
 import { toast } from "sonner"
 
+const PERIOD_MULTIPLIERS = {
+    '15 days': 0.5,
+    '1 month': 1,
+    '3 months': 3,
+    '6 months': 6,
+    '1 year': 12
+}
+
 const Edit = ({ payment, onPaymentUpdated }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [currencies, setCurrencies] = useState([])
@@ -35,6 +43,9 @@ const Edit = ({ payment, onPaymentUpdated }) => {
     const activeUser = user?.user || user
     const isAdminUser = activeUser?.role_id === 1
 
+    const initialClientId = useRef('')
+    const initialPeriod = useRef('')
+
     const [formData, setFormData] = useState({
         amount: '',
         currency_id: '',
@@ -46,7 +57,6 @@ const Edit = ({ payment, onPaymentUpdated }) => {
         stock_history_id: ''
     })
 
-    // Hydratation de l'état du formulaire à l'ouverture de la modal
     useEffect(() => {
         if (isOpen && payment) {
             setFormData({
@@ -60,18 +70,19 @@ const Edit = ({ payment, onPaymentUpdated }) => {
                 stock_history_id: payment.stock_history_id ? String(payment.stock_history_id) : ''
             })
 
-            // Baseline configuration loading matching Create context
+            initialClientId.current = payment.client_id ? String(payment.client_id) : ''
+            initialPeriod.current = payment.period || ''
+
             fetchBaseRelations()
 
-            // Dynamic dependency loading contextualized to the immutable payment_type
             if (payment.payment_type === 'Subscription') {
                 api.get('/clients')
-                    .then(res => setClients(res.data.clients || res.data || []))
+                    .then(res => setClients(res.data?.clients?.data ?? res.data?.clients ?? res.data ?? []))
                     .catch(err => console.error(err))
             } else if (payment.payment_type === 'Ticket') {
                 if (isAdminUser) {
                     api.get('/list/agents')
-                        .then(res => setAgents(res.data.data || res.data || []))
+                        .then(res => setAgents(res.data?.data ?? res.data ?? []))
                         .catch(err => console.error(err))
                 }
                 fetchStockMovements(payment.agent_id || '')
@@ -79,21 +90,52 @@ const Edit = ({ payment, onPaymentUpdated }) => {
         }
     }, [isOpen, payment])
 
-    // React cleanly to Admin updates updating agent filtering inside the modal scope
     useEffect(() => {
         if (isOpen && payment?.payment_type === 'Ticket') {
             fetchStockMovements(formData.agent_id)
-            // Only reset chosen movement if the filter actually changes from its baseline initial state
             if (formData.agent_id !== String(payment.agent_id || '')) {
                 setFormData(prev => ({ ...prev, stock_history_id: '' }))
             }
         }
     }, [formData.agent_id])
 
+    // --- AUTO-FILL CURRENCY & AMOUNT FOR SUBSCRIPTIONS (skip on initial load) ---
+    useEffect(() => {
+        if (!isOpen || payment?.payment_type !== 'Subscription' || !formData.client_id) return
+
+        const isInitial = formData.client_id === initialClientId.current &&
+                          formData.period === initialPeriod.current
+        if (isInitial) return
+
+        const client = clients.find(c => String(c.id) === String(formData.client_id))
+        if (!client?.subscription) return
+
+        if (client.subscription.currency_id) {
+            setFormData(prev => ({ ...prev, currency_id: String(client.subscription.currency_id) }))
+        }
+    }, [formData.client_id, formData.period, isOpen, payment?.payment_type, clients])
+
+    useEffect(() => {
+        if (!isOpen || payment?.payment_type !== 'Subscription' || !formData.client_id || !formData.period) return
+
+        const isInitial = formData.client_id === initialClientId.current &&
+                          formData.period === initialPeriod.current
+        if (isInitial) return
+
+        const client = clients.find(c => String(c.id) === String(formData.client_id))
+        if (!client?.subscription?.price) return
+
+        const basePrice = parseFloat(client.subscription.price)
+        const multiplier = PERIOD_MULTIPLIERS[formData.period] || 1
+        const calculatedAmount = (basePrice * multiplier).toFixed(2)
+
+        setFormData(prev => ({ ...prev, amount: calculatedAmount }))
+    }, [formData.client_id, formData.period, isOpen, payment?.payment_type, clients])
+
     const fetchBaseRelations = async () => {
         try {
             const currencyRes = await api.get('/currencies')
-            const currencyData = currencyRes.data.currencies || currencyRes.data || []
+            const currencyData = currencyRes.data?.currencies ?? currencyRes.data ?? []
             setCurrencies(currencyData)
         } catch (err) {
             console.error('Error fetching baseline configurations:', err)
@@ -103,11 +145,9 @@ const Edit = ({ payment, onPaymentUpdated }) => {
     const fetchStockMovements = async (agentId = '') => {
         try {
             let url = '/stock/history?action=Reduction'
-            if (agentId) {
-                url += `&agent_id=${agentId}`
-            }
+            if (agentId) url += `&agent_id=${agentId}`
             const res = await api.get(url)
-            setStockMovements(res.data.history || res.data || [])
+            setStockMovements(res.data?.history ?? res.data?.data ?? res.data ?? [])
         } catch (err) {
             console.error('Error fetching stock movements:', err)
         }
@@ -150,7 +190,6 @@ const Edit = ({ payment, onPaymentUpdated }) => {
             toast.success('Paiement mis à jour avec succès')
             setIsOpen(false)
             if (onPaymentUpdated) {
-                // Ensure proper dataset targeting format mapping your standard layout
                 onPaymentUpdated(response.data.data || response.data)
             }
         } catch (err) {
@@ -250,7 +289,7 @@ const Edit = ({ payment, onPaymentUpdated }) => {
                     )}
                 </div>
 
-                {/* CONDITIONAL SUB-FORMS BASED ON IMMUTABLE PAYMENT TYPE */}
+                {/* CONDITIONAL SUB-FORMS */}
                 {payment?.payment_type === 'Subscription' && (
                     <div className="space-y-4 border-l-2 border-blue-500 pl-3 bg-slate-50/50 p-3 rounded">
                         <div className="space-y-2">
@@ -262,7 +301,7 @@ const Edit = ({ payment, onPaymentUpdated }) => {
                                 <SelectContent>
                                     {clients.map(cl => (
                                         <SelectItem key={cl.id} value={String(cl.id)}>
-                                            {cl.name} ({cl.email || 'Pas de mail'})
+                                            {cl.name} ({cl.email || 'Pas de mail'}) — {cl.subscription?.bandwidth || ''}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -334,7 +373,6 @@ const Edit = ({ payment, onPaymentUpdated }) => {
                     </>
                 )}
 
-                {/* Description input converted to Textarea to match Create */}
                 <div className="space-y-2">
                     <Label htmlFor="edit-description">Description</Label>
                     <Textarea

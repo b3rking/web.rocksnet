@@ -22,6 +22,14 @@ import api from "#lib/axios"
 import { useAuth } from "#hooks/useAuth"
 import { toast } from "sonner"
 
+const PERIOD_MULTIPLIERS = {
+    '15 days': 0.5,
+    '1 month': 1,
+    '3 months': 3,
+    '6 months': 6,
+    '1 year': 12
+}
+
 const Create = ({ onPaymentCreated }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [currencies, setCurrencies] = useState([])
@@ -33,8 +41,8 @@ const Create = ({ onPaymentCreated }) => {
     const [isLoading, setIsLoading] = useState(false)
 
     const user = useAuth()
-    const activeUser = user?.user || user; // Normalizes auth structure if nested
-    const isAdminUser = activeUser?.role_id === 1; // Matches your exact admin role ID
+    const activeUser = user?.user || user
+    const isAdminUser = activeUser?.role_id === 1
 
     const [formData, setFormData] = useState({
         amount: '',
@@ -48,7 +56,6 @@ const Create = ({ onPaymentCreated }) => {
         stock_history_id: ''
     })
 
-    // Baseline configuration loading
     const fetchBaseRelations = async () => {
         try {
             const currencyRes = await api.get('/currencies')
@@ -65,7 +72,6 @@ const Create = ({ onPaymentCreated }) => {
         }
     }
 
-    // Dynamic stock history loader matching filters
     const fetchStockMovements = async (agentId = '') => {
         try {
             let url = '/stock/history?action=Reduction'
@@ -88,12 +94,10 @@ const Create = ({ onPaymentCreated }) => {
         }
     }, [isOpen])
 
-    // Handle structural type shifts
     useEffect(() => {
         if (formData.payment_type === 'Subscription') {
             api.get('/clients')
                 .then(res => {
-                    // clients is an object with .data array (Laravel pagination)
                     const clientList = res.data?.clients?.data ?? res.data?.clients ?? res.data?.data ?? res.data ?? []
                     setClients(Array.isArray(clientList) ? clientList : [])
                 })
@@ -118,7 +122,6 @@ const Create = ({ onPaymentCreated }) => {
             fetchStockMovements(formData.agent_id)
         }
 
-        // Clean up structural states when changing contexts
         setFormData(prev => ({
             ...prev,
             client_id: prev.payment_type === 'Subscription' ? prev.client_id : '',
@@ -128,13 +131,41 @@ const Create = ({ onPaymentCreated }) => {
         }))
     }, [formData.payment_type])
 
-    // Re-fetch movements when Admin updates agent targeting context
     useEffect(() => {
         if (formData.payment_type === 'Ticket') {
             fetchStockMovements(formData.agent_id)
             setFormData(prev => ({ ...prev, stock_history_id: '' }))
         }
     }, [formData.agent_id])
+
+    // --- AUTO-FILL CURRENCY & AMOUNT FOR SUBSCRIPTIONS ---
+    useEffect(() => {
+        if (formData.payment_type !== 'Subscription' || !formData.client_id) return
+
+        const client = clients.find(c => String(c.id) === String(formData.client_id))
+        if (!client?.subscription) return
+
+        // Auto-set currency from client's subscription
+        if (client.subscription.currency_id) {
+            setFormData(prev => ({
+                ...prev,
+                currency_id: String(client.subscription.currency_id)
+            }))
+        }
+    }, [formData.client_id, formData.payment_type, clients])
+
+    useEffect(() => {
+        if (formData.payment_type !== 'Subscription' || !formData.client_id || !formData.period) return
+
+        const client = clients.find(c => String(c.id) === String(formData.client_id))
+        if (!client?.subscription?.price) return
+
+        const basePrice = parseFloat(client.subscription.price)
+        const multiplier = PERIOD_MULTIPLIERS[formData.period] || 1
+        const calculatedAmount = (basePrice * multiplier).toFixed(2)
+
+        setFormData(prev => ({ ...prev, amount: calculatedAmount }))
+    }, [formData.client_id, formData.period, formData.payment_type, clients])
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -186,7 +217,6 @@ const Create = ({ onPaymentCreated }) => {
                 setErrors({ general: errorMessage })
             }
         } finally {
-            // Correct implementation to unlock the form UI state
             setIsLoading(false)
         }
     }
@@ -253,7 +283,7 @@ const Create = ({ onPaymentCreated }) => {
                             <Select value={formData.client_id} onValueChange={(val) => handleSelectChange('client_id', val)}>
                                 <SelectTrigger id="client_id" disabled={isLoading}><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
                                 <SelectContent>
-                                    {clients.map(cl => <SelectItem key={cl.id} value={String(cl.id)}>{cl.name} ({cl.email || 'Pas de mail'})</SelectItem>)}
+                                    {clients.map(cl => <SelectItem key={cl.id} value={String(cl.id)}>{cl.name} ({cl.email || 'Pas de mail'}) — {cl.subscription?.bandwidth || ''}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             {errors.client_id && <p className="text-red-500 text-sm">{errors.client_id[0]}</p>}
