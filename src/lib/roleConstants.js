@@ -19,6 +19,7 @@ export const ROLE_PERMISSIONS = {
         "users",
         "profils",
         "stocks",
+        "main-stocks",
         "history",
         "subscriptions",
         "clients",

@@ -1,4 +1,4 @@
-import { Error, AppLayout, Dashboard, User, Profil, Stock, History, Subscription, Client, Payment } from "@/pages";
+import { Error, AppLayout, Dashboard, User, Profil, Stock, History, Subscription, MainStock, Client, Payment } from "@/pages";
 import { createBrowserRouter } from "react-router";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleProtectedRoute from "./RoleProtectedRoute";
@@ -28,6 +28,11 @@ const router = createBrowserRouter([
             {
                 path: '/stocks',
                 element: <RoleProtectedRoute pageKey="stocks"><Stock /></RoleProtectedRoute>,
+                errorElement: <Error />
+            },
+            {
+                path: '/main-stocks',
+                element: <RoleProtectedRoute pageKey="main-stocks"><MainStock /></RoleProtectedRoute>,
                 errorElement: <Error />
             },
             {

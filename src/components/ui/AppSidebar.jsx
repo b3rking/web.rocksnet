@@ -46,6 +46,12 @@ const allMenuItems = [
         key: "stocks",
     },
     {
+        name: "Stock Principal",
+        url: "/main-stocks",
+        icon: IconBuildingWarehouse,
+        key: "main-stocks",
+    },
+    {
         name: "Historique",
         url: "/history",
         icon: IconCalendarTime,
